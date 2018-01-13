@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -60,7 +60,13 @@ public static class ProgrammingTest
     /// <returns>Int with reversed bytes</returns>
     public static int ReverseBytes(int value)
     {
-        return 0;
+        var unsignedValue = (uint)value;
+        return (int)(
+            (unsignedValue >> 24) & 0x000000ff |
+            (unsignedValue >> 08) & 0x00ff0000 |
+            (unsignedValue >> 08) & 0x0000ff00 |
+            (unsignedValue >> 24) & 0xff000000
+            );
     }
 
     /*
@@ -128,7 +134,7 @@ public static class ProgrammingTest
     {
         return position + velocity * Time.fixedDeltaTime;
     }
-    
+
     #endregion
 
 }
