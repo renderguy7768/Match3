@@ -144,29 +144,13 @@ public class DoNotSubmit : MonoBehaviour
         var length = arrayOfChars.Length;
         for (var i = 0; i < length; i++)
         {
-            if (arrayOfChars[i] <= '9')
+            int index;
+            if (CountHexDigitsHelper(arrayOfChars[i], '0', '9', out index) ||
+                CountHexDigitsHelper(arrayOfChars[i], 'A', 'F', out index, 10) ||
+                CountHexDigitsHelper(arrayOfChars[i], 'a', 'f', out index, 10))
             {
-                var digit = arrayOfChars[i] - '0';
-                if (digit >= 0)
-                {
-                    arrayOfCounts[digit]++;
-                }
-            }
-            else if (arrayOfChars[i] <= 'F')
-            {
-                var uppercase = arrayOfChars[i] - 'A';
-                if (uppercase >= 0)
-                {
-                    arrayOfCounts[10 + uppercase]++;
-                }
-            }
-            else if (arrayOfChars[i] <= 'f')
-            {
-                var lowercase = arrayOfChars[i] - 'a';
-                if (lowercase >= 0)
-                {
-                    arrayOfCounts[10 + lowercase]++;
-                }
+                Debug.Assert(index >= 0 && index <= 0xf, "Invalid index. This should not happen. Please check helper implementation.");
+                arrayOfCounts[index]++;
             }
         }
 
@@ -174,6 +158,32 @@ public class DoNotSubmit : MonoBehaviour
         {
             Debug.Log(i + " " + arrayOfCounts[i]);
         }
+    }
+
+    /// <summary>
+    /// Count Hex digit helper to check whether a given charater belongs to hexadecimal set and return the index of
+    /// the array to increment if it does as an out parameter.
+    /// </summary>
+    /// <param name="charToCheck"></param>
+    /// <param name="lowerBoundChar"></param>
+    /// <param name="upperBoundChar"></param>
+    /// <param name="index"></param>
+    /// <param name="indexOffset"></param>
+    /// <returns>Bool: True when index is valid false when it is not</returns>
+
+    private static bool CountHexDigitsHelper(char charToCheck, char lowerBoundChar, char upperBoundChar, out int index, int indexOffset = 0)
+    {
+        if (charToCheck <= upperBoundChar)
+        {
+            index = charToCheck - lowerBoundChar;
+            if (index >= 0)
+            {
+                index += indexOffset;
+                return true;
+            }
+        }
+        index = -1;
+        return false;
     }
 
     /// <summary>
