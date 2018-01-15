@@ -153,16 +153,11 @@ public class DoNotSubmit : MonoBehaviour
                 arrayOfCounts[index]++;
             }
         }
-
-        for (var i = 0; i < arrayOfCounts.Length; i++)
-        {
-            Debug.Log(i + " " + arrayOfCounts[i]);
-        }
     }
 
     /// <summary>
-    /// Count Hex digit helper to check whether a given charater belongs to hexadecimal set and return the index of
-    /// the array to increment if it does as an out parameter.
+    /// Count Hex digit helper to check whether a given charater belongs to hexadecimal set 
+    /// and return the index of the array to increment if it does as an out parameter.
     /// </summary>
     /// <param name="charToCheck"></param>
     /// <param name="lowerBoundChar"></param>
@@ -192,12 +187,12 @@ public class DoNotSubmit : MonoBehaviour
     /// </summary>
     /// <param name="first">The Original Vector</param>
     /// <param name="second">The Vector to transform the first into</param>
-    /// <param name="rotationAxis">Axis of rotation</param>
-    /// <param name="rotationAngle">Angle of rotation</param>
+    /// <param name="rotationAxis">Axis of rotation normalized</param>
+    /// <param name="rotationAngle">Angle of rotation in radians</param>
     public static void CalculateAngleAxisDifference(Vector3 first, Vector3 second, out Vector3 rotationAxis, out float rotationAngle)
     {
-        rotationAngle = 0f;
-        rotationAxis = Vector3.up;
+        rotationAngle = Mathf.Acos(Vector3.Dot(first, second));
+        rotationAxis = Vector3.Cross(first, second).normalized;
     }
 
     /// <summary>
@@ -213,6 +208,17 @@ public class DoNotSubmit : MonoBehaviour
     public static float Move(float position, float velocity)
     {
         return position + velocity * Time.fixedDeltaTime;
+
+        /*
+         * The problem occurring is due to floating point precision.
+         * As the number exceeds a certain value it becomes harder and harder to maintain precision.
+         * Because we only have 32 bits out of which 1 is sign bit, 8 bits are for the exponent,
+         * and 23 bits belong to the mantissa in the floating-point format.
+         * To fix this problem we would have to move the whole world to a new origin and then transform all the
+         * local object origin with respect to this origin which will give us back the required precision to
+         * keep the object moving.
+         */
+
     }
 
     #endregion
@@ -223,13 +229,22 @@ public class DoNotSubmit : MonoBehaviour
         //Debug.LogFormat("{0}", ReverseBytes(ReverseByteVal).ToString("X8"));
         //var a = new Card[52];
         //ShuffleCards(a);
-        var chararr = new[]
+        /*var chararr = new[]
         {
             'W', 'a', 'y', 'F', 'o', 'r', 'w', 'a', 'r', 'd',
             '1', '0', '2', '2', 'f', 'a', 'X', 'Z', 'c', 'C',
             '/','.','1','5','@','?',':',';','g','G','`','_'
         };
         var countarr = new int[16];
-        CountHexDigits(chararr, countarr);
+        CountHexDigits(chararr, countarr);*/
+        /*Vector3 rotationAxis;
+        float rotationAngle;
+        var v1 = new Vector3(2.5f, 1.6f, 4.578f).normalized;
+        var v2 = new Vector3(9.5f, 7.6f, 22.578f).normalized;
+        Debug.Log(v2);
+        CalculateAngleAxisDifference(v1, v2, out rotationAxis, out rotationAngle);
+        Debug.Log(rotationAxis);
+        Debug.Log(Mathf.Rad2Deg * rotationAngle);
+        Debug.Log(Quaternion.AngleAxis(Mathf.Rad2Deg * rotationAngle, rotationAxis) * v1);*/
     }
 }
