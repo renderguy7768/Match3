@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -13,7 +13,7 @@ public class Cell : Graphic, IPointerClickHandler
 
     private RectTransform m_rectTransform;
     private GameObject[] m_tileTypes;
-    
+
     public void Setup(int x, int y, GameObject[] tileTypes)
     {
         m_tileTypes = tileTypes;
@@ -28,7 +28,7 @@ public class Cell : Graphic, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if(Clicked != null)
+        if (Clicked != null)
         {
             Clicked(this);
         }
@@ -48,15 +48,15 @@ public class Cell : Graphic, IPointerClickHandler
 
         CellType = -1;
     }
-    
+
     public void SetCell(int tileType)
     {
         ClearCell();
 
-        GameObject tile = Instantiate(m_tileTypes[tileType], m_rectTransform);
+        var tile = Instantiate(m_tileTypes[tileType], m_rectTransform);
 
-        RectTransform tileRect = tile.GetComponent<RectTransform>();
-        RectTransform prefabRect = m_tileTypes[tileType].GetComponent<RectTransform>();
+        var tileRect = tile.GetComponent<RectTransform>();
+        var prefabRect = m_tileTypes[tileType].GetComponent<RectTransform>();
 
         tileRect.localScale = prefabRect.localScale;
 

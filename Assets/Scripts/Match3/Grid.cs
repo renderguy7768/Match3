@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,37 +12,39 @@ public class Grid : MonoBehaviour
     private RectTransform m_rectTransform;
     private Cell[,] m_cells;
 
-    private Cell m_lastClicked = null;
+    private Cell m_lastClicked;
 
-    void Start()
+    private void Start()
     {
         // Grab components and initialize arrays
         m_rectTransform = GetComponent<RectTransform>();
-        RectTransform[,] tileParents = new RectTransform[m_height, m_width];
+        var tileParents = new RectTransform[m_height, m_width];
         m_cells = new Cell[m_height, m_width];
 
         // Calculate layout values
-        int cellWidth = ((int)m_rectTransform.rect.width) / m_width;
-        int cellHeight = ((int)m_rectTransform.rect.height) / m_height;
+        var cellWidth = ((int)m_rectTransform.rect.width) / m_width;
+        var cellHeight = ((int)m_rectTransform.rect.height) / m_height;
 
-        int xPadding = (int)m_rectTransform.rect.width - (cellWidth * m_width);
-        int yPadding = (int)m_rectTransform.rect.height - (cellHeight * m_height);
+        var xPadding = (int)m_rectTransform.rect.width - (cellWidth * m_width);
+        var yPadding = (int)m_rectTransform.rect.height - (cellHeight * m_height);
 
         // Create cells
-        for ( int ydx = 0; ydx < m_height; ++ydx)
+        for (var ydx = 0; ydx < m_height; ++ydx)
         {
-            for ( int xdx = 0; xdx < m_width; ++xdx)
+            for (var xdx = 0; xdx < m_width; ++xdx)
             {
                 tileParents[ydx, xdx] = new GameObject("cell " + xdx + ", " + ydx).AddComponent<RectTransform>();
                 tileParents[ydx, xdx].SetParent(m_rectTransform);
                 tileParents[ydx, xdx].localScale = Vector3.one;
 
-                Rect r = new Rect();
-                r.width = cellWidth;
-                r.height = cellHeight;
+                var r = new Rect
+                {
+                    width = cellWidth,
+                    height = cellHeight,
+                    x = cellWidth * xdx,
+                    y = cellHeight * ydx
+                };
 
-                r.x = cellWidth * xdx;
-                r.y = cellHeight * ydx;
 
                 tileParents[ydx, xdx].pivot = new Vector2(0, 0);
 
@@ -50,8 +52,8 @@ public class Grid : MonoBehaviour
                 tileParents[ydx, xdx].SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, cellWidth);
 
                 tileParents[ydx, xdx].localPosition = new Vector3(
-                    r.x - (m_rectTransform.rect.width / 2) + ((float)xPadding / 2), 
-                    r.y - (m_rectTransform.rect.height / 2) + ((float)yPadding / 2), 
+                    r.x - (m_rectTransform.rect.width / 2) + ((float)xPadding / 2),
+                    r.y - (m_rectTransform.rect.height / 2) + ((float)yPadding / 2),
                     0);
 
                 m_cells[ydx, xdx] = tileParents[ydx, xdx].gameObject.AddComponent<Cell>();
@@ -64,7 +66,7 @@ public class Grid : MonoBehaviour
         StartCoroutine(PopulateField());
     }
 
-    
+
 
     public void SetCell(int x, int y, int tileType)
     {
@@ -76,9 +78,9 @@ public class Grid : MonoBehaviour
         // TODO: Randomly set the cells to different tile types
         // Algorithm should ensure that there is at least one valid
         // swap and that there are existing no matches.
-        for ( int ydx = 0; ydx < m_height; ++ydx )
+        for (var ydx = 0; ydx < m_height; ++ydx)
         {
-            for ( int xdx = 0; xdx < m_width; ++xdx)
+            for (var xdx = 0; xdx < m_width; ++xdx)
             {
                 SetCell(xdx, ydx, (ydx * m_width + xdx) % m_tileTypes.Length);
                 yield return null;
@@ -107,9 +109,9 @@ public class Grid : MonoBehaviour
         // If the swap is valid then the Grid should
         // Find all matches, clear matches, fill in empty
         // cells and repeat until there are no matches.
-        
-        int t1 = c1.CellType;
-        int t2 = c2.CellType;
+
+        var t1 = c1.CellType;
+        var t2 = c2.CellType;
 
         SetCell(c1.X, c1.Y, t2);
         SetCell(c2.X, c2.Y, t1);
