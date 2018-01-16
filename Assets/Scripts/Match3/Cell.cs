@@ -3,81 +3,84 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class Cell : Graphic, IPointerClickHandler
+namespace Assets.Scripts.Match3
 {
-    public int X { get; private set; }
-    public int Y { get; private set; }
-
-    public int CellType { get; private set; }
-    public event Action<Cell> Clicked;
-
-    private RectTransform m_rectTransform;
-    private GameObject[] m_tileTypes;
-
-    public void Setup(int x, int y, GameObject[] tileTypes)
+    public class Cell : Graphic, IPointerClickHandler
     {
-        m_tileTypes = tileTypes;
+        public int X { get; private set; }
+        public int Y { get; private set; }
 
-        X = x;
-        Y = y;
+        public int CellType { get; private set; }
+        public event Action<Cell> Clicked;
 
-        CellType = -1;
+        private RectTransform m_rectTransform;
+        private GameObject[] m_tileTypes;
 
-        m_rectTransform = GetComponent<RectTransform>();
-    }
-
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        if (Clicked != null)
+        public void Setup(int x, int y, GameObject[] tileTypes)
         {
-            Clicked(this);
-        }
-    }
+            m_tileTypes = tileTypes;
 
-    public void SetCellType(int to)
-    {
-        CellType = to;
-    }
+            X = x;
+            Y = y;
 
-    public void ClearCell()
-    {
-        if (m_rectTransform.childCount == 1)
-        {
-            Destroy(m_rectTransform.GetChild(0).gameObject);
+            CellType = -1;
+
+            m_rectTransform = GetComponent<RectTransform>();
         }
 
-        CellType = -1;
-    }
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (Clicked != null)
+            {
+                Clicked(this);
+            }
+        }
 
-    public void SetCell(int tileType)
-    {
-        ClearCell();
+        public void SetCellType(int to)
+        {
+            CellType = to;
+        }
 
-        var tile = Instantiate(m_tileTypes[tileType], m_rectTransform);
+        public void ClearCell()
+        {
+            if (m_rectTransform.childCount == 1)
+            {
+                Destroy(m_rectTransform.GetChild(0).gameObject);
+            }
 
-        var tileRect = tile.GetComponent<RectTransform>();
-        var prefabRect = m_tileTypes[tileType].GetComponent<RectTransform>();
+            CellType = -1;
+        }
 
-        tileRect.localScale = prefabRect.localScale;
+        public void SetCell(int tileType)
+        {
+            ClearCell();
 
-        tileRect.sizeDelta = prefabRect.sizeDelta;
-        tileRect.anchoredPosition = prefabRect.anchoredPosition;
+            var tile = Instantiate(m_tileTypes[tileType], m_rectTransform);
 
-        CellType = tileType;
-    }
+            var tileRect = tile.GetComponent<RectTransform>();
+            var prefabRect = m_tileTypes[tileType].GetComponent<RectTransform>();
 
-    ////////////////////////////////////////////////////////
-    // Overrides for Graphic in order to have an invisible
-    // UI Collider
-    ////////////////////////////////////////////////////////
-    protected override void OnPopulateMesh(VertexHelper vh)
-    {
-        vh.Clear();
-        return;
-    }
+            tileRect.localScale = prefabRect.localScale;
 
-    public override bool Raycast(Vector2 sp, Camera eventCamera)
-    {
-        return true;
+            tileRect.sizeDelta = prefabRect.sizeDelta;
+            tileRect.anchoredPosition = prefabRect.anchoredPosition;
+
+            CellType = tileType;
+        }
+
+        ////////////////////////////////////////////////////////
+        // Overrides for Graphic in order to have an invisible
+        // UI Collider
+        ////////////////////////////////////////////////////////
+        protected override void OnPopulateMesh(VertexHelper vh)
+        {
+            vh.Clear();
+            return;
+        }
+
+        public override bool Raycast(Vector2 sp, Camera eventCamera)
+        {
+            return true;
+        }
     }
 }
