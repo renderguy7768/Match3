@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Assets.Scripts.Match3
@@ -11,7 +12,7 @@ namespace Assets.Scripts.Match3
         public int m_height;
 
         private RectTransform m_rectTransform;
-        private Cell[,] m_cells;
+        private CellParent[,] m_cellparents;
 
         private Cell m_lastClicked;
 
@@ -19,18 +20,18 @@ namespace Assets.Scripts.Match3
         {
             // Grab components and initialize arrays
             m_rectTransform = GetComponent<RectTransform>();
-            var tileParents = new RectTransform[m_height, m_width];
-            m_cells = new Cell[m_height, m_width];
+            //var tileParents = new RectTransform[m_height, m_width];
+            m_cellparents = new CellParent[m_height, m_width];
 
             // Calculate layout values
-            var cellWidth = ((int)m_rectTransform.rect.width) / m_width;
-            var cellHeight = ((int)m_rectTransform.rect.height) / m_height;
+            CellParent.ms_cellWidth = ((int)m_rectTransform.rect.width) / m_width;
+            CellParent.ms_cellHeight = ((int)m_rectTransform.rect.height) / m_height;
 
-            var xPadding = (int)m_rectTransform.rect.width - (cellWidth * m_width);
-            var yPadding = (int)m_rectTransform.rect.height - (cellHeight * m_height);
+            CellParent.ms_xPadding = (int)m_rectTransform.rect.width - (CellParent.ms_cellWidth * m_width);
+            CellParent.ms_yPadding = (int)m_rectTransform.rect.height - (CellParent.ms_cellHeight * m_height);
 
-            var boxCollider2DSize = new Vector2(cellWidth - xPadding, cellHeight);
-            var boxCollider2DOffset = new Vector2(cellWidth, cellHeight) * 0.5f;
+            CellParent.ms_boxCollider2DSize = new Vector2(CellParent.ms_cellWidth - CellParent.ms_xPadding, CellParent.ms_cellHeight);
+            CellParent.ms_boxCollider2DOffset = new Vector2(CellParent.ms_cellWidth, CellParent.ms_cellHeight) * 0.5f;
 
             // Create cells
             for (var ydx = 0; ydx < m_height; ++ydx)
@@ -38,46 +39,48 @@ namespace Assets.Scripts.Match3
                 for (var xdx = 0; xdx < m_width; ++xdx)
                 {
                     // Creating parent gameobject
-                    tileParents[ydx, xdx] = new GameObject("cell " + xdx + ", " + ydx).AddComponent<RectTransform>();
-                    tileParents[ydx, xdx].SetParent(m_rectTransform);
-                    tileParents[ydx, xdx].localScale = Vector3.one;
+                    m_cellparents[ydx, xdx].m_rectTransform = new GameObject("cell " + xdx + ", " + ydx).AddComponent<RectTransform>();
+                    m_cellparents[ydx, xdx].m_rectTransform.SetParent(m_rectTransform);
+                    m_cellparents[ydx, xdx].m_rectTransform.localScale = Vector3.one;
 
-                    // Adding boxcollider2d component
-                    var boxCollider2D = tileParents[ydx, xdx].gameObject.AddComponent<BoxCollider2D>();
-                    boxCollider2D.size = boxCollider2DSize;
-                    boxCollider2D.offset = boxCollider2DOffset;
+                    /*// Adding boxcollider2d component
+                    m_cellparents[ydx, xdx].m_boxCollider2D = m_cellparents[ydx, xdx].m_rectTransform.gameObject.AddComponent<BoxCollider2D>();
+                    m_cellparents[ydx, xdx].m_boxCollider2D.size = CellParent.ms_boxCollider2DSize;
+                    m_cellparents[ydx, xdx].m_boxCollider2D.offset = CellParent.ms_boxCollider2DOffset;
 
                     // Adding rigidbody2d component
-                    var rigidBody2D = tileParents[ydx, xdx].gameObject.AddComponent<Rigidbody2D>();
-                    rigidBody2D.constraints =
+                    m_cellparents[ydx, xdx].m_rigidbody2D = m_cellparents[ydx, xdx].m_rectTransform.gameObject.AddComponent<Rigidbody2D>();
+                    m_cellparents[ydx, xdx].m_rigidbody2D.constraints =
                         RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionX;
-                    rigidBody2D.angularDrag = 0.0f;
-                    rigidBody2D.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-                    rigidBody2D.interpolation = RigidbodyInterpolation2D.Interpolate;
-                    rigidBody2D.gravityScale = 10.0f;
+                    m_cellparents[ydx, xdx].m_rigidbody2D.angularDrag = 0.0f;
+                    m_cellparents[ydx, xdx].m_rigidbody2D.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                    m_cellparents[ydx, xdx].m_rigidbody2D.interpolation = RigidbodyInterpolation2D.Interpolate;
+                    m_cellparents[ydx, xdx].m_rigidbody2D.gravityScale = 10.0f;
+                    m_cellparents[ydx, xdx].m_rigidbody2D.drag = 1.0f;*/
 
-                    var r = new Rect
+                    m_cellparents[ydx, xdx].m_rect = new Rect
                     {
-                        width = cellWidth,
-                        height = cellHeight,
-                        x = cellWidth * xdx,
-                        y = cellHeight * ydx
+                        width = CellParent.ms_cellWidth,
+                        height = CellParent.ms_cellHeight,
+                        x = CellParent.ms_cellWidth * xdx,
+                        y = CellParent.ms_cellHeight * ydx
                     };
 
 
-                    tileParents[ydx, xdx].pivot = new Vector2(0, 0);
+                    m_cellparents[ydx, xdx].m_rectTransform.pivot = new Vector2(0, 0);
 
-                    tileParents[ydx, xdx].SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, cellWidth);
-                    tileParents[ydx, xdx].SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, cellWidth);
+                    m_cellparents[ydx, xdx].m_rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, CellParent.ms_cellWidth);
+                    m_cellparents[ydx, xdx].m_rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, CellParent.ms_cellWidth);
 
-                    tileParents[ydx, xdx].localPosition = new Vector3(
-                        r.x - (m_rectTransform.rect.width / 2) + ((float)xPadding / 2),
-                        r.y - (m_rectTransform.rect.height / 2) + ((float)yPadding / 2),
+                    m_cellparents[ydx, xdx].m_rectTransform.localPosition = new Vector3(
+                        m_cellparents[ydx, xdx].m_rect.x - (m_rectTransform.rect.width / 2) + ((float)CellParent.ms_xPadding / 2),
+                        (m_cellparents[ydx, xdx].m_rect.y - (m_rectTransform.rect.height / 2) + ((float)CellParent.ms_yPadding / 2)) /*+ m_rectTransform.rect.height*/,
                         0);
 
-                    m_cells[ydx, xdx] = tileParents[ydx, xdx].gameObject.AddComponent<Cell>();
-                    m_cells[ydx, xdx].Setup(xdx, ydx, m_tileTypes);
-                    m_cells[ydx, xdx].Clicked += OnCellClicked;
+                    m_cellparents[ydx, xdx].m_cell = m_cellparents[ydx, xdx].m_rectTransform.gameObject.AddComponent<Cell>();
+                    m_cellparents[ydx, xdx].m_cell.Setup(xdx, ydx, m_tileTypes);
+                    m_cellparents[ydx, xdx].m_cell.Clicked += OnCellClicked;
+                    m_cellparents[ydx, xdx].m_cell.Destroyed += OnCellDestroyed;
                 }
             }
 
@@ -85,11 +88,9 @@ namespace Assets.Scripts.Match3
             StartCoroutine(PopulateField());
         }
 
-
-
         public void SetCell(int x, int y, int tileType)
         {
-            m_cells[y, x].SetCell(tileType);
+            m_cellparents[y, x].m_cell.SetCell(tileType);
         }
 
         public IEnumerator PopulateField()
@@ -119,6 +120,17 @@ namespace Assets.Scripts.Match3
             {
                 m_lastClicked = clicked;
             }
+        }
+
+        public void OnCellDestroyed(Cell destroyed)
+        {
+            var cellsToBeMoved = new List<Cell>();
+            for (var i = destroyed.Y + 1; i < m_height; i++)
+            {
+                cellsToBeMoved.Add(m_cellparents[i, destroyed.X].m_cell);
+            }
+
+            destroyed.MoveCells(cellsToBeMoved);
         }
 
         private void TrySwap(Cell c1, Cell c2)
