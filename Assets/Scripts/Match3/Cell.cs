@@ -5,13 +5,14 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.Match3
 {
-    public class Cell : Graphic, IPointerClickHandler
+    public class Cell : Graphic, IPointerDownHandler, IPointerUpHandler
     {
-        public int X { get; private set; }
-        public int Y { get; private set; }
+        public int R; //{ get; private set; }
+        public int C; //{ get; private set; }
 
         public int CellType { get; private set; }
-        public event Action<Cell> Clicked;
+        public event Action<Cell, Vector2> Clicked;
+        public event Action<Vector2> Released;
 
         private RectTransform m_rectTransform;
         private GameObject[] m_tileTypes;
@@ -20,19 +21,27 @@ namespace Assets.Scripts.Match3
         {
             m_tileTypes = tileTypes;
 
-            X = x;
-            Y = y;
+            R = x;
+            C = y;
 
             CellType = -1;
 
             m_rectTransform = GetComponent<RectTransform>();
         }
 
-        public void OnPointerClick(PointerEventData eventData)
+        public void OnPointerDown(PointerEventData eventData)
         {
-            if (Clicked != null)
+            if (Clicked != null && eventData.button == PointerEventData.InputButton.Left)
             {
-                Clicked(this);
+                Clicked(this, eventData.position);
+            }
+        }
+
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            if (Released != null && eventData.button == PointerEventData.InputButton.Left)
+            {
+                Released(eventData.position);
             }
         }
 
@@ -75,7 +84,6 @@ namespace Assets.Scripts.Match3
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
-            return;
         }
 
         public override bool Raycast(Vector2 sp, Camera eventCamera)
