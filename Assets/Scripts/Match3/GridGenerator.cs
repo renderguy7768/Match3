@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -16,6 +17,8 @@ namespace Assets.Scripts.Match3
         private Cell m_lastClicked;
         private Vector2 m_initialPressPosition;
         private Vector2 m_finalPressPosition;
+
+        private const float m_minSqrSwipeThreshold = 10.0f * 10.0f;
 
         private enum Direction { Invalid, Left, Right, Up, Down }
 
@@ -41,46 +44,8 @@ namespace Assets.Scripts.Match3
             {
                 for (var column = 0; column < m_height; ++column)
                 {
-                    // Creating parent gameobject
-                    m_cellparents[row, column].m_rectTransform = new GameObject("cell " + row + ", " + column).AddComponent<RectTransform>();
-                    m_cellparents[row, column].m_rectTransform.SetParent(m_rectTransform);
-                    m_cellparents[row, column].m_rectTransform.localScale = Vector3.one;
-
-                    // Adding boxcollider2d component
-                    m_cellparents[row, column].m_boxCollider2D = m_cellparents[row, column].m_rectTransform.gameObject.AddComponent<BoxCollider2D>();
-                    m_cellparents[row, column].m_boxCollider2D.size = CellParent.ms_boxCollider2DSize;
-                    m_cellparents[row, column].m_boxCollider2D.offset = CellParent.ms_boxCollider2DOffset;
-
-                    // Adding rigidbody2d component
-                    m_cellparents[row, column].m_rigidbody2D = m_cellparents[row, column].m_rectTransform.gameObject.AddComponent<Rigidbody2D>();
-                    m_cellparents[row, column].m_rigidbody2D.constraints =
-                        RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionX;
-                    m_cellparents[row, column].m_rigidbody2D.angularDrag = 0.0f;
-                    m_cellparents[row, column].m_rigidbody2D.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-                    m_cellparents[row, column].m_rigidbody2D.interpolation = RigidbodyInterpolation2D.Interpolate;
-                    m_cellparents[row, column].m_rigidbody2D.gravityScale = 10.0f;
-                    m_cellparents[row, column].m_rigidbody2D.drag = 1.0f;
-
-                    m_cellparents[row, column].m_rect = new Rect
-                    {
-                        width = CellParent.ms_cellWidth,
-                        height = CellParent.ms_cellHeight,
-                        x = CellParent.ms_cellWidth * row,
-                        y = CellParent.ms_cellHeight * column
-                    };
-
-
-                    m_cellparents[row, column].m_rectTransform.pivot = new Vector2(0, 0);
-
-                    m_cellparents[row, column].m_rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, CellParent.ms_cellWidth);
-                    m_cellparents[row, column].m_rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, CellParent.ms_cellWidth);
-
-                    m_cellparents[row, column].m_rectTransform.localPosition = new Vector3(
-                        m_cellparents[row, column].m_rect.x - (m_rectTransform.rect.width / 2) + ((float)CellParent.ms_xPadding / 2),
-                        (m_cellparents[row, column].m_rect.y - (m_rectTransform.rect.height / 2) + ((float)CellParent.ms_yPadding / 2)) + m_rectTransform.rect.height,
-                        0);
-
-                    m_cellparents[row, column].m_cell = m_cellparents[row, column].m_rectTransform.gameObject.AddComponent<Cell>();
+                    // Creating parent gameobject with all required components
+                    m_cellparents[row, column] = new CellParent(row, column, m_rectTransform);
                     m_cellparents[row, column].m_cell.Setup(row, column, m_tileTypes);
                     m_cellparents[row, column].m_cell.Clicked += OnCellClicked;
                     m_cellparents[row, column].m_cell.Released += OnCellReleased;
@@ -124,29 +89,56 @@ namespace Assets.Scripts.Match3
         {
             if (m_lastClicked == null) return;
             m_finalPressPosition = currentPointerPosition;
-            print(GetDirection(m_lastClicked));
-            //TrySwap(m_lastClicked, clicked);
+            Cell otherCell = null;
+            var direction = GetDirection(m_lastClicked);
+            switch (direction)
+            {
+                case Direction.Left:
+                    otherCell = m_cellparents[m_lastClicked.R, m_lastClicked.C - 1].m_cell;
+                    break;
+                case Direction.Right:
+                    otherCell = m_cellparents[m_lastClicked.R, m_lastClicked.C + 1].m_cell;
+                    break;
+                case Direction.Up:
+                    otherCell = m_cellparents[m_lastClicked.R + 1, m_lastClicked.C].m_cell;
+                    break;
+                case Direction.Down:
+                    otherCell = m_cellparents[m_lastClicked.R - 1, m_lastClicked.C].m_cell;
+                    break;
+            }
+
+            if (otherCell != null)
+            {
+                TrySwap(m_lastClicked, otherCell);
+            }
+
             m_lastClicked = null;
         }
 
         private Direction GetDirection(Cell clicked)
         {
             var deltaPressPosition = m_finalPressPosition - m_initialPressPosition;
+
+            if (deltaPressPosition.sqrMagnitude <= m_minSqrSwipeThreshold) return Direction.Invalid;
+
             var swipeAngle = Mathf.Atan2(deltaPressPosition.y, deltaPressPosition.x) * Mathf.Rad2Deg;
 
-            if (swipeAngle > -45.0f && swipeAngle <= 45.0f && clicked.R < m_width - 1)
+            if (swipeAngle > -45.0f && swipeAngle <= 45.0f && clicked.C < m_width - 1)
             {
                 return Direction.Right;
             }
-            if (swipeAngle > 45.0f && swipeAngle <= 135.0f && clicked.C < m_height - 1)
+
+            if (swipeAngle > 45.0f && swipeAngle <= 135.0f && clicked.R < m_height - 1)
             {
                 return Direction.Up;
             }
-            if ((swipeAngle > 135.0f || swipeAngle <= -135.0f) && clicked.R > 0)
+
+            if ((swipeAngle > 135.0f || swipeAngle <= -135.0f) && clicked.C > 0)
             {
                 return Direction.Left;
             }
-            if (swipeAngle > -135.0f && swipeAngle <= -45.0f && clicked.C > 0)
+
+            if (swipeAngle > -135.0f && swipeAngle <= -45.0f && clicked.R > 0)
             {
                 return Direction.Down;
             }
