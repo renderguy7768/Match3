@@ -10,7 +10,14 @@ namespace Assets.Scripts.Match3
         public int R; //{ get; private set; }
         public int C; //{ get; private set; }
 
-        public int CellType { get; private set; }
+        // Treating CellType as Bit Flag
+        private uint _cellType;
+        public uint CellType {
+            get { return _cellType; }
+            private set { _cellType = 1u << (int)value; }
+        }
+        public int TileIndex { get; private set; }
+
         public event Action<Cell, Vector2> Clicked;
         public event Action<Vector2> Released;
 
@@ -24,7 +31,8 @@ namespace Assets.Scripts.Match3
             R = x;
             C = y;
 
-            CellType = -1;
+            _cellType = 0;
+            TileIndex = -1;
 
             m_rectTransform = GetComponent<RectTransform>();
         }
@@ -47,7 +55,8 @@ namespace Assets.Scripts.Match3
 
         public void SetCellType(int to)
         {
-            CellType = to;
+            CellType = (uint)to;
+            TileIndex = to;
         }
 
         public void ClearCell()
@@ -57,7 +66,8 @@ namespace Assets.Scripts.Match3
                 Destroy(m_rectTransform.GetChild(0).gameObject);
             }
 
-            CellType = -1;
+            _cellType = 0;
+            TileIndex = -1;
         }
 
         public void SetCell(int tileType)
@@ -74,7 +84,8 @@ namespace Assets.Scripts.Match3
             tileRect.sizeDelta = prefabRect.sizeDelta;
             tileRect.anchoredPosition = prefabRect.anchoredPosition;
 
-            CellType = tileType;
+            CellType = (uint)tileType;
+            TileIndex = tileType;
         }
 
         ////////////////////////////////////////////////////////

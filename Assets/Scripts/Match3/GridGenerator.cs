@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 
@@ -72,10 +71,30 @@ namespace Assets.Scripts.Match3
             {
                 for (var column = 0; column < m_height; ++column)
                 {
+
+
                     SetCell(row, column, (column * m_width + row) % m_tileTypes.Length);
                     yield return null;
                 }
             }
+        }
+
+        private bool CheckForMatchesDuringGeneration(int row, int column)
+        {
+            if (row > 1 && column > 1)
+            {
+                // Check left and down
+            }
+            else if (row <= 1 && column > 1)
+            {
+                // Check left
+            }
+            else if (row > 1 && column <= 1)
+            {
+                // Check down
+            }
+
+            return false;
         }
 
         public void OnCellClicked(Cell clicked, Vector2 currentPointerPosition)
@@ -154,8 +173,8 @@ namespace Assets.Scripts.Match3
             // Find all matches, clear matches, fill in empty
             // cells and repeat until there are no matches.
 
-            var t1 = c1.CellType;
-            var t2 = c2.CellType;
+            var t1 = c1.TileIndex;
+            var t2 = c2.TileIndex;
 
             SetCell(c1.R, c1.C, t2);
             SetCell(c2.R, c2.C, t1);
