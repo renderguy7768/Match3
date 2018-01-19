@@ -86,15 +86,28 @@ namespace Assets.Scripts.Match3
                     uint validIndex;
                     if (CheckForMatchesDuringGeneration(row, column, tileType, out validIndex))
                     {
-                       print(validIndex.ToString("X"));
+                        // Making a valid tile index list using the bits of valid Index
+                        tileType = GenerateAValidTileIndexFromValidIndexBits(validIndex);
                     }
-                    else
-                    {
-                        SetCell(row, column, tileType);
-                    }
+                    SetCell(row, column, tileType);
+
                     yield return null;
                 }
             }
+        }
+
+        private int GenerateAValidTileIndexFromValidIndexBits(uint validIndex)
+        {
+            var validTileIndex = new List<int>(m_tileTypes.Length);
+            for (var i = 0; i < m_tileTypes.Length; i++)
+            {
+                if ((validIndex & (1 << i)) != 0)
+                {
+                    validTileIndex.Add(i);
+                }
+            }
+            var validTileType = Random.Range(0, validTileIndex.Count);
+            return validTileIndex[validTileType];
         }
 
         private bool CheckForMatchesDuringGeneration(int row, int column, int tileType, out uint validIndex)
@@ -106,56 +119,17 @@ namespace Assets.Scripts.Match3
             if (row > 1 && column > 1)
             {
                 // Check left and down
-                /*if ((m_cellparents[row, column - 1].m_cell.CellType &
-                     m_cellparents[row, column - 2].m_cell.CellType &
-                     cellType) != 0)
-                {
-                    validIndex |= cellType;
-                    validIndex = ~validIndex;
-                    validIndex &= m_validIndexMask;
-                    returnValue = true;
-                }*/
-                /*if ((m_cellparents[row - 1, column].m_cell.CellType &
-                     m_cellparents[row - 2, column].m_cell.CellType &
-                     cellType) != 0)
-                {
-                    validIndex |= cellType;
-                    validIndex = ~validIndex;
-                    validIndex &= m_validIndexMask;
-                    returnValue = true;
-                }*/
-
                 returnValue = CheckLeft(row, column, cellType, ref validIndex) ||
                               CheckDown(row, column, cellType, ref validIndex);
             }
             else if (row <= 1 && column > 1)
             {
                 // Check left
-                /*if ((m_cellparents[row, column - 1].m_cell.CellType &
-                     m_cellparents[row, column - 2].m_cell.CellType &
-                     cellType) != 0)
-                {
-                    validIndex |= cellType;
-                    validIndex = ~validIndex;
-                    validIndex &= m_validIndexMask;
-                    returnValue = true;
-                }*/
-
                 returnValue = CheckLeft(row, column, cellType, ref validIndex);
             }
             else if (row > 1 && column <= 1)
             {
                 // Check down
-                /*if ((m_cellparents[row - 1, column].m_cell.CellType &
-                     m_cellparents[row - 2, column].m_cell.CellType &
-                     cellType) != 0)
-                {
-                    validIndex |= cellType;
-                    validIndex = ~validIndex;
-                    validIndex &= m_validIndexMask;
-                    returnValue = true;
-                }*/
-
                 returnValue = CheckDown(row, column, cellType, ref validIndex);
             }
 
