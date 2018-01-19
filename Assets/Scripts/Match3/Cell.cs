@@ -3,6 +3,10 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+/**
+ *************************** DO NOT FORGET TO CLEAN UP BEFORE SUBMITTING*************************
+ **/
+
 namespace Assets.Scripts.Match3
 {
     public class Cell : Graphic, IPointerDownHandler, IPointerUpHandler

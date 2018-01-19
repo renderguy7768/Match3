@@ -37,7 +37,7 @@ namespace Assets.Scripts.Match3
             // Grab components and initialize arrays
             m_rectTransform = GetComponent<RectTransform>();
             //var tileParents = new RectTransform[m_height, m_width];
-            m_cellparents = new CellParent[m_width, m_height];
+            m_cellparents = new CellParent[m_height, m_width];
 
             // Calculate layout values
             CellParent.ms_cellWidth = ((int)m_rectTransform.rect.width) / m_width;
@@ -50,9 +50,9 @@ namespace Assets.Scripts.Match3
             CellParent.ms_boxCollider2DOffset = new Vector2(CellParent.ms_cellWidth, CellParent.ms_cellHeight) * 0.5f;
 
             // Create cells
-            for (var row = 0; row < m_width; ++row)
+            for (var row = 0; row < m_height; ++row)
             {
-                for (var column = 0; column < m_height; ++column)
+                for (var column = 0; column < m_width; ++column)
                 {
                     // Creating parent gameobject with all required components
                     m_cellparents[row, column] = new CellParent(row, column, m_rectTransform);
@@ -76,9 +76,9 @@ namespace Assets.Scripts.Match3
             // TODO: Randomly set the cells to different tile types
             // Algorithm should ensure that there is at least one valid
             // swap and that there are existing no matches.
-            for (var row = 0; row < m_width; ++row)
+            for (var row = 0; row < m_height; ++row)
             {
-                for (var column = 0; column < m_height; ++column)
+                for (var column = 0; column < m_width; ++column)
                 {
                     var tileType = Random.Range(0, m_tileTypes.Length);
                     uint validIndex;
@@ -170,35 +170,33 @@ namespace Assets.Scripts.Match3
                  cellType) == 0) return false;
             validIndex |= cellType;
 
-            if (secondaryDirection != Direction.Invalid)
+            if (secondaryDirection == Direction.Invalid) return true;
+            switch (secondaryDirection)
             {
-                switch (secondaryDirection)
-                {
-                    case Direction.Left:
-                        r1 = r2 = row;
-                        c1 = column - 1;
-                        c2 = column - 2;
-                        break;
-                    case Direction.Right:
-                        break;
-                    case Direction.Up:
-                        break;
-                    case Direction.Down:
-                        c1 = c2 = column;
-                        r1 = row - 1;
-                        r2 = row - 2;
-                        break;
-                    default:
-                        Debug.Assert(false, "This should not happen.");
-                        return false;
-                }
+                case Direction.Left:
+                    r1 = r2 = row;
+                    c1 = column - 1;
+                    c2 = column - 2;
+                    break;
+                case Direction.Right:
+                    break;
+                case Direction.Up:
+                    break;
+                case Direction.Down:
+                    c1 = c2 = column;
+                    r1 = row - 1;
+                    r2 = row - 2;
+                    break;
+                default:
+                    Debug.Assert(false, "This should not happen.");
+                    return false;
+            }
 
-                var secondaryCellType = m_cellparents[r1, c1].m_cell.CellType &
-                                        m_cellparents[r2, c2].m_cell.CellType;
-                if (secondaryCellType != 0)
-                {
-                    validIndex |= secondaryCellType;
-                }
+            var secondaryCellType = m_cellparents[r1, c1].m_cell.CellType &
+                                    m_cellparents[r2, c2].m_cell.CellType;
+            if (secondaryCellType != 0)
+            {
+                validIndex |= secondaryCellType;
             }
             return true;
         }
