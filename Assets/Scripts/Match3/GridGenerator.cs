@@ -66,8 +66,6 @@ namespace Assets.Scripts.Match3
             StartCoroutine(PopulateField());
         }
 
-
-
         public void SetCell(int r, int c, int tileType)
         {
             m_cellparents[r, c].m_cell.SetCell(tileType);
@@ -87,6 +85,9 @@ namespace Assets.Scripts.Match3
                     if (CheckForMatchesDuringGeneration(row, column, tileType, out validIndex))
                     {
                         // Making a valid tile index list using the bits of valid Index
+                        validIndex = ~validIndex;
+                        validIndex &= m_validIndexMask;
+                        print(row + "," + column + "," + validIndex.ToString("X"));
                         tileType = GenerateAValidTileIndexFromValidIndexBits(validIndex);
                     }
                     SetCell(row, column, tileType);
@@ -112,50 +113,93 @@ namespace Assets.Scripts.Match3
 
         private bool CheckForMatchesDuringGeneration(int row, int column, int tileType, out uint validIndex)
         {
-            var returnValue = false;
+            var isMatchLeft = false;
+            var isMatchDown = false;
             var cellType = 1u << tileType;
             validIndex = 1u << m_tileTypes.Length;
 
             if (row > 1 && column > 1)
             {
                 // Check left and down
-                returnValue = CheckLeft(row, column, cellType, ref validIndex) ||
-                              CheckDown(row, column, cellType, ref validIndex);
+                isMatchLeft = CheckMatch3(row, column, cellType, ref validIndex, Direction.Left, Direction.Down);
+                isMatchDown = CheckMatch3(row, column, cellType, ref validIndex, Direction.Down, Direction.Left);
             }
             else if (row <= 1 && column > 1)
             {
                 // Check left
-                returnValue = CheckLeft(row, column, cellType, ref validIndex);
+                isMatchLeft = CheckMatch3(row, column, cellType, ref validIndex, Direction.Left);
             }
             else if (row > 1 && column <= 1)
             {
                 // Check down
-                returnValue = CheckDown(row, column, cellType, ref validIndex);
+                isMatchDown = CheckMatch3(row, column, cellType, ref validIndex, Direction.Down);
             }
 
-            return returnValue;
+            return isMatchLeft || isMatchDown;
         }
 
-        private bool CheckLeft(int row, int column, uint cellType, ref uint validIndex)
+        private bool CheckMatch3(int row, int column, uint cellType, ref uint validIndex, Direction primaryDirection, Direction secondaryDirection = Direction.Invalid)
         {
-            if ((m_cellparents[row, column - 1].m_cell.CellType &
-                 m_cellparents[row, column - 2].m_cell.CellType &
+            var r1 = -1;
+            var c1 = -1;
+            var r2 = -1;
+            var c2 = -1;
+            switch (primaryDirection)
+            {
+                case Direction.Left:
+                    r1 = r2 = row;
+                    c1 = column - 1;
+                    c2 = column - 2;
+                    break;
+                case Direction.Right:
+                    break;
+                case Direction.Up:
+                    break;
+                case Direction.Down:
+                    c1 = c2 = column;
+                    r1 = row - 1;
+                    r2 = row - 2;
+                    break;
+                default:
+                    Debug.Assert(false, "This should not happen. Invalid Direction");
+                    return false;
+            }
+
+            if ((m_cellparents[r1, c1].m_cell.CellType &
+                 m_cellparents[r2, c2].m_cell.CellType &
                  cellType) == 0) return false;
             validIndex |= cellType;
-            validIndex = ~validIndex;
-            validIndex &= m_validIndexMask;
-            return true;
 
-        }
+            if (secondaryDirection != Direction.Invalid)
+            {
+                switch (secondaryDirection)
+                {
+                    case Direction.Left:
+                        r1 = r2 = row;
+                        c1 = column - 1;
+                        c2 = column - 2;
+                        break;
+                    case Direction.Right:
+                        break;
+                    case Direction.Up:
+                        break;
+                    case Direction.Down:
+                        c1 = c2 = column;
+                        r1 = row - 1;
+                        r2 = row - 2;
+                        break;
+                    default:
+                        Debug.Assert(false, "This should not happen.");
+                        return false;
+                }
 
-        private bool CheckDown(int row, int column, uint cellType, ref uint validIndex)
-        {
-            if ((m_cellparents[row - 1, column].m_cell.CellType &
-                 m_cellparents[row - 2, column].m_cell.CellType &
-                 cellType) == 0) return false;
-            validIndex |= cellType;
-            validIndex = ~validIndex;
-            validIndex &= m_validIndexMask;
+                var secondaryCellType = m_cellparents[r1, c1].m_cell.CellType &
+                                        m_cellparents[r2, c2].m_cell.CellType;
+                if (secondaryCellType != 0)
+                {
+                    validIndex |= secondaryCellType;
+                }
+            }
             return true;
         }
 
