@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Assets.Scripts.Match3
@@ -21,8 +22,18 @@ namespace Assets.Scripts.Match3
 
         private enum Direction { Invalid, Left, Right, Up, Down }
 
+        private uint m_validIndexMask;
+
         private void Start()
         {
+            // Creating valid index mask
+            var tileArrayLength = m_tileTypes.Length - 1;
+            while (tileArrayLength >= 0)
+            {
+                m_validIndexMask |= 1u << tileArrayLength;
+                tileArrayLength--;
+            }
+
             // Grab components and initialize arrays
             m_rectTransform = GetComponent<RectTransform>();
             //var tileParents = new RectTransform[m_height, m_width];
@@ -71,30 +82,107 @@ namespace Assets.Scripts.Match3
             {
                 for (var column = 0; column < m_height; ++column)
                 {
-
-
-                    SetCell(row, column, (column * m_width + row) % m_tileTypes.Length);
+                    var tileType = Random.Range(0, m_tileTypes.Length);
+                    uint validIndex;
+                    if (CheckForMatchesDuringGeneration(row, column, tileType, out validIndex))
+                    {
+                       print(validIndex.ToString("X"));
+                    }
+                    else
+                    {
+                        SetCell(row, column, tileType);
+                    }
                     yield return null;
                 }
             }
         }
 
-        private bool CheckForMatchesDuringGeneration(int row, int column)
+        private bool CheckForMatchesDuringGeneration(int row, int column, int tileType, out uint validIndex)
         {
+            var returnValue = false;
+            var cellType = 1u << tileType;
+            validIndex = 1u << m_tileTypes.Length;
+
             if (row > 1 && column > 1)
             {
                 // Check left and down
+                /*if ((m_cellparents[row, column - 1].m_cell.CellType &
+                     m_cellparents[row, column - 2].m_cell.CellType &
+                     cellType) != 0)
+                {
+                    validIndex |= cellType;
+                    validIndex = ~validIndex;
+                    validIndex &= m_validIndexMask;
+                    returnValue = true;
+                }*/
+                /*if ((m_cellparents[row - 1, column].m_cell.CellType &
+                     m_cellparents[row - 2, column].m_cell.CellType &
+                     cellType) != 0)
+                {
+                    validIndex |= cellType;
+                    validIndex = ~validIndex;
+                    validIndex &= m_validIndexMask;
+                    returnValue = true;
+                }*/
+
+                returnValue = CheckLeft(row, column, cellType, ref validIndex) ||
+                              CheckDown(row, column, cellType, ref validIndex);
             }
             else if (row <= 1 && column > 1)
             {
                 // Check left
+                /*if ((m_cellparents[row, column - 1].m_cell.CellType &
+                     m_cellparents[row, column - 2].m_cell.CellType &
+                     cellType) != 0)
+                {
+                    validIndex |= cellType;
+                    validIndex = ~validIndex;
+                    validIndex &= m_validIndexMask;
+                    returnValue = true;
+                }*/
+
+                returnValue = CheckLeft(row, column, cellType, ref validIndex);
             }
             else if (row > 1 && column <= 1)
             {
                 // Check down
+                /*if ((m_cellparents[row - 1, column].m_cell.CellType &
+                     m_cellparents[row - 2, column].m_cell.CellType &
+                     cellType) != 0)
+                {
+                    validIndex |= cellType;
+                    validIndex = ~validIndex;
+                    validIndex &= m_validIndexMask;
+                    returnValue = true;
+                }*/
+
+                returnValue = CheckDown(row, column, cellType, ref validIndex);
             }
 
-            return false;
+            return returnValue;
+        }
+
+        private bool CheckLeft(int row, int column, uint cellType, ref uint validIndex)
+        {
+            if ((m_cellparents[row, column - 1].m_cell.CellType &
+                 m_cellparents[row, column - 2].m_cell.CellType &
+                 cellType) == 0) return false;
+            validIndex |= cellType;
+            validIndex = ~validIndex;
+            validIndex &= m_validIndexMask;
+            return true;
+
+        }
+
+        private bool CheckDown(int row, int column, uint cellType, ref uint validIndex)
+        {
+            if ((m_cellparents[row - 1, column].m_cell.CellType &
+                 m_cellparents[row - 2, column].m_cell.CellType &
+                 cellType) == 0) return false;
+            validIndex |= cellType;
+            validIndex = ~validIndex;
+            validIndex &= m_validIndexMask;
+            return true;
         }
 
         public void OnCellClicked(Cell clicked, Vector2 currentPointerPosition)

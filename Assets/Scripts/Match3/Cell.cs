@@ -16,7 +16,8 @@ namespace Assets.Scripts.Match3
             get { return _cellType; }
             private set { _cellType = 1u << (int)value; }
         }
-        public int TileIndex { get; private set; }
+
+        public int TileIndex;// { get; private set; }
 
         public event Action<Cell, Vector2> Clicked;
         public event Action<Vector2> Released;
