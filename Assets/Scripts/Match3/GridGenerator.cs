@@ -65,7 +65,6 @@ namespace Assets.Scripts.Match3
 
             // Grab components and initialize arrays
             m_rectTransform = GetComponent<RectTransform>();
-            //var tileParents = new RectTransform[m_height, m_width];
             m_cells = new Cell[m_height, m_width];
 
             // Calculate layout values
@@ -138,7 +137,6 @@ namespace Assets.Scripts.Match3
                         //print(row + "," + column + "," + validIndex.ToString("X"));
                         tileType = GenerateAValidTileIndexFromValidIndexBits(validIndex);
                     }
-                    //SetCell(row, column, tileType);
                     m_cells[row, column].SetCell(tileType);
 
                     yield return null;
@@ -329,12 +327,6 @@ namespace Assets.Scripts.Match3
             // If the swap is valid then the Grid should
             // Find all matches, clear matches, fill in empty
             // cells and repeat until there are no matches.
-
-            /*var t1 = c1.TileIndex;
-            var t2 = c2.TileIndex;
-
-            SetCell(c1.R, c1.C, t2);
-            SetCell(c2.R, c2.C, t1);*/
 
             var tempSiblingIndex = c1.transform.GetSiblingIndex();
             c1.transform.SetSiblingIndex(c2.transform.GetSiblingIndex());
