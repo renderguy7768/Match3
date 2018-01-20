@@ -92,10 +92,10 @@ namespace Assets.Scripts.Match3
             var tileRect = tile.GetComponent<RectTransform>();
             var prefabRect = ms_tileTypes[tileType].GetComponent<RectTransform>();
 
-            tileRect.localScale = prefabRect.localScale;
+            tileRect.localScale = Vector3.one;
 
-            tileRect.sizeDelta = prefabRect.sizeDelta;
-            tileRect.anchoredPosition = prefabRect.anchoredPosition;
+            tileRect.sizeDelta = Vector2.zero;
+            tileRect.anchoredPosition = Vector2.zero;
 
             CellType = (uint)tileType;
             TileIndex = tileType;

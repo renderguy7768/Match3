@@ -12,13 +12,14 @@ namespace Assets.Scripts.Match3
         public int m_height;
 
         private RectTransform m_rectTransform;
-        private CellParent[,] m_cellparents;
+        private Cell[,] m_cells;
 
         private Cell m_lastClicked;
         private Vector2 m_initialPressPosition;
         private Vector2 m_finalPressPosition;
 
         private const float m_minSqrSwipeThreshold = 10.0f * 10.0f;
+        private const float m_epsison = float.Epsilon * 10.0f;
 
         private enum Direction { Invalid, Left, Right, Up, Down }
 
@@ -42,17 +43,19 @@ namespace Assets.Scripts.Match3
             // Grab components and initialize arrays
             m_rectTransform = GetComponent<RectTransform>();
             //var tileParents = new RectTransform[m_height, m_width];
-            m_cellparents = new CellParent[m_height, m_width];
+            m_cells = new Cell[m_height, m_width];
 
             // Calculate layout values
-            CellParent.ms_cellWidth = ((int)m_rectTransform.rect.width) / m_width;
-            CellParent.ms_cellHeight = ((int)m_rectTransform.rect.height) / m_height;
+            var cellWidth = ((int)m_rectTransform.rect.width) / m_width;
+            var cellHeight = ((int)m_rectTransform.rect.height) / m_height;
 
-            CellParent.ms_xPadding = (int)m_rectTransform.rect.width - (CellParent.ms_cellWidth * m_width);
-            CellParent.ms_yPadding = (int)m_rectTransform.rect.height - (CellParent.ms_cellHeight * m_height);
+            var xPadding = (int)m_rectTransform.rect.width - (cellWidth * m_width);
+            var yPadding = (int)m_rectTransform.rect.height - (cellHeight * m_height);
 
-            CellParent.ms_boxCollider2DSize = new Vector2(CellParent.ms_cellWidth - CellParent.ms_xPadding, CellParent.ms_cellHeight);
-            CellParent.ms_boxCollider2DOffset = new Vector2(CellParent.ms_cellWidth, CellParent.ms_cellHeight) * 0.5f;
+            var xOffsetPerCell = (m_rectTransform.rect.width + xPadding) * 0.5f;
+            var yOffsetPerCell = (m_rectTransform.rect.height + yPadding) * 0.5f;
+
+            var startHeightOffset = m_rectTransform.rect.height * 1.25f;
 
             Cell.SetupStaticVariables(m_tileTypes, m_rectTransform.rect.yMin);
             // Create cells
@@ -61,21 +64,37 @@ namespace Assets.Scripts.Match3
                 for (var column = 0; column < m_width; ++column)
                 {
                     // Creating parent gameobject with all required components
-                    m_cellparents[row, column] = new CellParent(row, column, m_rectTransform);
-                    //m_cellparents[row, column].m_cell.Setup(row, column, m_tileTypes);
-                    m_cellparents[row, column].m_cell.Clicked += OnCellClicked;
-                    m_cellparents[row, column].m_cell.Released += OnCellReleased;
+
+                    var newCell = new GameObject("cell " + row + ", " + column);
+
+                    var rectTransform = newCell.AddComponent<RectTransform>();
+                    rectTransform.SetParent(m_rectTransform);
+                    rectTransform.localScale = Vector3.one;
+                    rectTransform.pivot = Vector2.zero;
+                    rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, cellWidth);
+                    rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, cellHeight);
+
+                    var rect = new Rect
+                    {
+                        width = cellWidth,
+                        height = cellHeight,
+                        x = cellWidth * column,
+                        y = cellHeight * row
+                    };
+                    var xPos = rect.x - xOffsetPerCell;
+                    var yPos = rect.y - yOffsetPerCell;
+                    rectTransform.localPosition = new Vector3(xPos, yPos + startHeightOffset, 0);
+
+                    m_cells[row, column] = newCell.AddComponent<Cell>();
+                    m_cells[row, column].Setup(row, column, xPos, yPos);
+                    m_cells[row, column].Clicked += OnCellClicked;
+                    m_cells[row, column].Released += OnCellReleased;
                 }
             }
 
             // Fill in for the first time
             StartCoroutine(PopulateField());
         }
-
-        /*public void SetCell(int r, int c, int tileType)
-        {
-
-        }*/
 
         public IEnumerator PopulateField()
         {
@@ -97,14 +116,14 @@ namespace Assets.Scripts.Match3
                         tileType = GenerateAValidTileIndexFromValidIndexBits(validIndex);
                     }
                     //SetCell(row, column, tileType);
-                    m_cellparents[row, column].m_cell.SetCell(tileType);
+                    m_cells[row, column].SetCell(tileType);
 
                     yield return null;
                 }
             }
 
-            var lastCell = m_cellparents[m_height - 1, m_width - 1].m_cell;
-            yield return new WaitUntil(() => Vector3.Distance(lastCell.TargetPosition, lastCell.rectTransform.localPosition) < 0.1f);
+            var lastCell = m_cells[m_height - 1, m_width - 1];
+            yield return new WaitUntil(() => Vector3.Distance(lastCell.TargetPosition, lastCell.rectTransform.localPosition) < m_epsison);
             _gameState = GameState.MoveAllowed;
         }
 
@@ -176,8 +195,8 @@ namespace Assets.Scripts.Match3
                     return false;
             }
 
-            if ((m_cellparents[r1, c1].m_cell.CellType &
-                 m_cellparents[r2, c2].m_cell.CellType &
+            if ((m_cells[r1, c1].CellType &
+                 m_cells[r2, c2].CellType &
                  cellType) == 0) return false;
             validIndex |= cellType;
 
@@ -203,8 +222,8 @@ namespace Assets.Scripts.Match3
                     return false;
             }
 
-            var secondaryCellType = m_cellparents[r1, c1].m_cell.CellType &
-                                    m_cellparents[r2, c2].m_cell.CellType;
+            var secondaryCellType = m_cells[r1, c1].CellType &
+                                    m_cells[r2, c2].CellType;
             if (secondaryCellType != 0)
             {
                 validIndex |= secondaryCellType;
@@ -228,16 +247,16 @@ namespace Assets.Scripts.Match3
             switch (direction)
             {
                 case Direction.Left:
-                    otherCell = m_cellparents[m_lastClicked.R, m_lastClicked.C - 1].m_cell;
+                    otherCell = m_cells[m_lastClicked.R, m_lastClicked.C - 1];
                     break;
                 case Direction.Right:
-                    otherCell = m_cellparents[m_lastClicked.R, m_lastClicked.C + 1].m_cell;
+                    otherCell = m_cells[m_lastClicked.R, m_lastClicked.C + 1];
                     break;
                 case Direction.Up:
-                    otherCell = m_cellparents[m_lastClicked.R + 1, m_lastClicked.C].m_cell;
+                    otherCell = m_cells[m_lastClicked.R + 1, m_lastClicked.C];
                     break;
                 case Direction.Down:
-                    otherCell = m_cellparents[m_lastClicked.R - 1, m_lastClicked.C].m_cell;
+                    otherCell = m_cells[m_lastClicked.R - 1, m_lastClicked.C];
                     break;
             }
 
@@ -297,7 +316,7 @@ namespace Assets.Scripts.Match3
             var tempSiblingIndex = c1.transform.GetSiblingIndex();
             c1.transform.SetSiblingIndex(c2.transform.GetSiblingIndex());
             c2.transform.SetSiblingIndex(tempSiblingIndex);
-            Utility.Swap(ref m_cellparents[c1.R, c1.C], ref m_cellparents[c2.R, c2.C]);
+            Utility.Swap(ref m_cells[c1.R, c1.C], ref m_cells[c2.R, c2.C]);
             c1.Swap(c2);
 
         }
