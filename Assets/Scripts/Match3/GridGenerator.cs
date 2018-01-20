@@ -7,9 +7,20 @@ namespace Assets.Scripts.Match3
     [RequireComponent(typeof(RectTransform))]
     public class GridGenerator : MonoBehaviour
     {
-        public GameObject[] m_tileTypes;
+        [Tooltip("Fill all the tile names from Resources/TilePrefabs here")]
+        public string[] m_tileNames;
+
+        [Tooltip("Grid Width (Number of Columns)")]
         public int m_width;
+
+        [Tooltip("Grid Height (Number of Rows)")]
         public int m_height;
+
+        [Tooltip("Increase this if tiles are being created on screen instead of Load Area")]
+        [Range(1.0f, 20.0f)]
+        public float m_startHeightOffsetMultiplier;
+
+        private GameObject[] m_tileTypePrefabs;
 
         private RectTransform m_rectTransform;
         private Cell[,] m_cells;
@@ -29,11 +40,23 @@ namespace Assets.Scripts.Match3
 
         private uint m_validIndexMask;
 
+        private void Awake()
+        {
+            // Loading Tile Prefabs
+            m_tileTypePrefabs = new GameObject[m_tileNames.Length];
+            for (var i = 0; i < m_tileNames.Length; i++)
+            {
+                m_tileTypePrefabs[i] = Resources.Load<GameObject>(@"TilePrefabs\" + m_tileNames[i]);
+            }
+
+            // Setting initial Gamestate
+            _gameState = GameState.Wait;
+        }
+
         private void Start()
         {
-            _gameState = GameState.Wait;
             // Creating valid index mask
-            var tileArrayLength = m_tileTypes.Length - 1;
+            var tileArrayLength = m_tileTypePrefabs.Length - 1;
             while (tileArrayLength >= 0)
             {
                 m_validIndexMask |= 1u << tileArrayLength;
@@ -55,9 +78,9 @@ namespace Assets.Scripts.Match3
             var xOffsetPerCell = (m_rectTransform.rect.width + xPadding) * 0.5f;
             var yOffsetPerCell = (m_rectTransform.rect.height + yPadding) * 0.5f;
 
-            var startHeightOffset = m_rectTransform.rect.height * 1.25f;
+            var startHeightOffset = m_rectTransform.rect.height * m_startHeightOffsetMultiplier;
 
-            Cell.SetupStaticVariables(m_tileTypes, m_rectTransform.rect.yMin);
+            Cell.SetupStaticVariables(m_tileTypePrefabs, m_rectTransform.rect.yMin);
             // Create cells
             for (var row = 0; row < m_height; ++row)
             {
@@ -105,7 +128,7 @@ namespace Assets.Scripts.Match3
             {
                 for (var column = 0; column < m_width; ++column)
                 {
-                    var tileType = Random.Range(0, m_tileTypes.Length);
+                    var tileType = Random.Range(0, m_tileTypePrefabs.Length);
                     uint validIndex;
                     if (CheckForMatchesDuringGeneration(row, column, tileType, out validIndex))
                     {
@@ -129,8 +152,8 @@ namespace Assets.Scripts.Match3
 
         private int GenerateAValidTileIndexFromValidIndexBits(uint validIndex)
         {
-            var validTileIndex = new List<int>(m_tileTypes.Length);
-            for (var i = 0; i < m_tileTypes.Length; i++)
+            var validTileIndex = new List<int>(m_tileTypePrefabs.Length);
+            for (var i = 0; i < m_tileTypePrefabs.Length; i++)
             {
                 if ((validIndex & (1 << i)) != 0)
                 {
@@ -146,7 +169,7 @@ namespace Assets.Scripts.Match3
             var isMatchLeft = false;
             var isMatchDown = false;
             var cellType = 1u << tileType;
-            validIndex = 1u << m_tileTypes.Length;
+            validIndex = 1u << m_tileTypePrefabs.Length;
 
             if (row > 1 && column > 1)
             {
