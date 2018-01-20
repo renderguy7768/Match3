@@ -115,8 +115,10 @@ namespace Assets.Scripts.Match3
             Utility.Swap(ref _c, ref otherCell._c);
             Utility.Swap(ref _targetPosition, ref otherCell._targetPosition);
 
+#if UNITY_EDITOR
             gameObject.name = "cell " + R + ", " + C;
             otherCell.gameObject.name = "cell " + otherCell.R + ", " + otherCell.C;
+#endif
         }
 
         ////////////////////////////////////////////////////////

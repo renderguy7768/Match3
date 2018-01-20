@@ -328,9 +328,12 @@ namespace Assets.Scripts.Match3
             // Find all matches, clear matches, fill in empty
             // cells and repeat until there are no matches.
 
+#if UNITY_EDITOR
             var tempSiblingIndex = c1.transform.GetSiblingIndex();
             c1.transform.SetSiblingIndex(c2.transform.GetSiblingIndex());
             c2.transform.SetSiblingIndex(tempSiblingIndex);
+#endif
+
             Utility.Swap(ref m_cells[c1.R, c1.C], ref m_cells[c2.R, c2.C]);
             c1.Swap(c2);
 
