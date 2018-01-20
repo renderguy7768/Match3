@@ -14,10 +14,12 @@ namespace Assets.Scripts.Match3
         private const float MinMoveSpeed = 350.0f;
         private const float MaxMoveSpeed = MinMoveSpeed + 100.0f;
 
-        public int R; //{ get; private set; }
-        public int C; //{ get; private set; }
-
-        public Vector3 TargetPosition; //{ get; private set; }
+        private int _r;
+        public int R { get { return _r; } }
+        private int _c;
+        public int C { get { return _c; } }
+        private Vector3 _targetPosition;
+        public Vector3 TargetPosition { get { return _targetPosition; } }
 
         // Treating CellType as Bit Flag
         private uint _cellType;
@@ -27,7 +29,7 @@ namespace Assets.Scripts.Match3
             private set { _cellType = 1u << (int)value; }
         }
 
-        public int TileIndex;// { get; private set; }
+        public int TileIndex { get; private set; }
 
         public event Action<Cell, Vector2> Clicked;
         public event Action<Vector2> Released;
@@ -39,15 +41,15 @@ namespace Assets.Scripts.Match3
 
         public void Setup(int r, int c, float targetX, float targetY)
         {
-            R = r;
-            C = c;
+            _r = r;
+            _c = c;
 
             _cellType = 0;
             TileIndex = -1;
 
             m_rectTransform = GetComponent<RectTransform>();
 
-            TargetPosition = new Vector3(targetX, targetY, 0);
+            _targetPosition = new Vector3(targetX, targetY, 0);
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -66,13 +68,7 @@ namespace Assets.Scripts.Match3
             }
         }
 
-        public void SetCellType(int to)
-        {
-            CellType = (uint)to;
-            TileIndex = to;
-        }
-
-        public void ClearCell()
+        private void ClearCell()
         {
             if (m_rectTransform.childCount == 1)
             {
@@ -115,9 +111,9 @@ namespace Assets.Scripts.Match3
 
         public void Swap(Cell otherCell)
         {
-            Utility.Swap(ref R, ref otherCell.R);
-            Utility.Swap(ref C, ref otherCell.C);
-            Utility.Swap(ref TargetPosition, ref otherCell.TargetPosition);
+            Utility.Swap(ref _r, ref otherCell._r);
+            Utility.Swap(ref _c, ref otherCell._c);
+            Utility.Swap(ref _targetPosition, ref otherCell._targetPosition);
 
             gameObject.name = "cell " + R + ", " + C;
             otherCell.gameObject.name = "cell " + otherCell.R + ", " + otherCell.C;

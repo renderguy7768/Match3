@@ -118,7 +118,7 @@ namespace Assets.Scripts.Match3
             StartCoroutine(PopulateField());
         }
 
-        public IEnumerator PopulateField()
+        private IEnumerator PopulateField()
         {
             // TODO: Randomly set the cells to different tile types
             // Algorithm should ensure that there is at least one valid
@@ -252,14 +252,14 @@ namespace Assets.Scripts.Match3
             return true;
         }
 
-        public void OnCellClicked(Cell clicked, Vector2 currentPointerPosition)
+        private void OnCellClicked(Cell clicked, Vector2 currentPointerPosition)
         {
             if (m_lastClicked != null || _gameState == GameState.Wait) return;
             m_lastClicked = clicked;
             m_initialPressPosition = currentPointerPosition;
         }
 
-        public void OnCellReleased(Vector2 currentPointerPosition)
+        private void OnCellReleased(Vector2 currentPointerPosition)
         {
             if (m_lastClicked == null) return;
             m_finalPressPosition = currentPointerPosition;
