@@ -42,8 +42,7 @@ namespace Assets.Scripts.Match3
             };
             var xPos = m_rect.x - (parent.rect.width * 0.5f) + (ms_xPadding * 0.5f);
             var yPos = m_rect.y - (parent.rect.height * 0.5f) + (ms_yPadding * 0.5f);
-            m_rectTransform.localPosition = new Vector3(xPos, yPos + parent.rect.height, 0);
-
+            m_rectTransform.localPosition = new Vector3(xPos, yPos + (parent.rect.height * 1.25f), 0);
             /*m_rigidbody2D = m_gameObject.AddComponent<Rigidbody2D>();
             m_rigidbody2D.constraints =
                 RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionX;

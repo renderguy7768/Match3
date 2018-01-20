@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public static class ProgrammingTest
@@ -221,7 +219,9 @@ public static class ProgrammingTest
     public static float Move(float position, float velocity)
     {
         return position + velocity * Time.fixedDeltaTime;
-        /*
+
+        // Issue and solution: 
+        /**
          * The problem occurring is due to floating point precision.
          * As the number exceeds a certain value it becomes harder and harder to maintain precision.
          * Because we only have 32 bits out of which 1 is sign bit, 8 bits are for the exponent,

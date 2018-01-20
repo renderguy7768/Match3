@@ -22,10 +22,15 @@ namespace Assets.Scripts.Match3
 
         private enum Direction { Invalid, Left, Right, Up, Down }
 
+        private enum GameState { MoveAllowed, Wait }
+
+        private GameState _gameState;
+
         private uint m_validIndexMask;
 
         private void Start()
         {
+            _gameState = GameState.Wait;
             // Creating valid index mask
             var tileArrayLength = m_tileTypes.Length - 1;
             while (tileArrayLength >= 0)
@@ -49,7 +54,7 @@ namespace Assets.Scripts.Match3
             CellParent.ms_boxCollider2DSize = new Vector2(CellParent.ms_cellWidth - CellParent.ms_xPadding, CellParent.ms_cellHeight);
             CellParent.ms_boxCollider2DOffset = new Vector2(CellParent.ms_cellWidth, CellParent.ms_cellHeight) * 0.5f;
 
-            Cell.m_tileTypes = m_tileTypes;
+            Cell.SetupStaticVariables(m_tileTypes, m_rectTransform.rect.yMin);
             // Create cells
             for (var row = 0; row < m_height; ++row)
             {
@@ -97,6 +102,10 @@ namespace Assets.Scripts.Match3
                     yield return null;
                 }
             }
+
+            var lastCell = m_cellparents[m_height - 1, m_width - 1].m_cell;
+            yield return new WaitUntil(() => Vector3.Distance(lastCell.TargetPosition, lastCell.rectTransform.localPosition) < 0.1f);
+            _gameState = GameState.MoveAllowed;
         }
 
         private int GenerateAValidTileIndexFromValidIndexBits(uint validIndex)
@@ -205,7 +214,7 @@ namespace Assets.Scripts.Match3
 
         public void OnCellClicked(Cell clicked, Vector2 currentPointerPosition)
         {
-            if (m_lastClicked != null) return;
+            if (m_lastClicked != null || _gameState == GameState.Wait) return;
             m_lastClicked = clicked;
             m_initialPressPosition = currentPointerPosition;
         }

@@ -11,7 +11,8 @@ namespace Assets.Scripts.Match3
 {
     public class Cell : Graphic, IPointerDownHandler, IPointerUpHandler
     {
-        private const float MoveSpeed = 350.0f;
+        private const float MinMoveSpeed = 350.0f;
+        private const float MaxMoveSpeed = MinMoveSpeed + 100.0f;
 
         public int R; //{ get; private set; }
         public int C; //{ get; private set; }
@@ -32,7 +33,9 @@ namespace Assets.Scripts.Match3
         public event Action<Vector2> Released;
 
         private RectTransform m_rectTransform;
-        public static GameObject[] m_tileTypes { private get; set; }
+
+        private static GameObject[] ms_tileTypes;
+        private static float ms_boardMinY;
 
         public void Setup(int r, int c, float targetX, float targetY)
         {
@@ -84,10 +87,10 @@ namespace Assets.Scripts.Match3
         {
             ClearCell();
 
-            var tile = Instantiate(m_tileTypes[tileType], m_rectTransform);
+            var tile = Instantiate(ms_tileTypes[tileType], m_rectTransform);
 
             var tileRect = tile.GetComponent<RectTransform>();
-            var prefabRect = m_tileTypes[tileType].GetComponent<RectTransform>();
+            var prefabRect = ms_tileTypes[tileType].GetComponent<RectTransform>();
 
             tileRect.localScale = prefabRect.localScale;
 
@@ -98,7 +101,29 @@ namespace Assets.Scripts.Match3
             TileIndex = tileType;
         }
 
+        public static void SetupStaticVariables(GameObject[] tileTypes, float boardHeight)
+        {
+            ms_tileTypes = tileTypes;
+            ms_boardMinY = boardHeight;
+        }
 
+        private void Update()
+        {
+            var t = Mathf.Abs((rectTransform.localPosition.y - ms_boardMinY) / ms_boardMinY);
+            var currentSpeed = Mathf.Lerp(MinMoveSpeed, MaxMoveSpeed, t);
+            rectTransform.localPosition = Vector3.MoveTowards(rectTransform.localPosition, TargetPosition,
+                currentSpeed * Time.deltaTime);
+        }
+
+        public void Swap(Cell otherCell)
+        {
+            Utility.Swap(ref R, ref otherCell.R);
+            Utility.Swap(ref C, ref otherCell.C);
+            Utility.Swap(ref TargetPosition, ref otherCell.TargetPosition);
+
+            gameObject.name = "cell " + R + ", " + C;
+            otherCell.gameObject.name = "cell " + otherCell.R + ", " + otherCell.C;
+        }
 
         ////////////////////////////////////////////////////////
         // Overrides for Graphic in order to have an invisible
@@ -112,21 +137,6 @@ namespace Assets.Scripts.Match3
         public override bool Raycast(Vector2 sp, Camera eventCamera)
         {
             return true;
-        }
-
-        private void Update()
-        {
-            rectTransform.localPosition = Vector3.MoveTowards(rectTransform.localPosition, TargetPosition, MoveSpeed * Time.deltaTime);
-        }
-
-        public void Swap(Cell otherCell)
-        {
-            Utility.Swap(ref R, ref otherCell.R);
-            Utility.Swap(ref C, ref otherCell.C);
-            Utility.Swap(ref TargetPosition, ref otherCell.TargetPosition);
-
-            gameObject.name = "cell " + R + ", " + C;
-            otherCell.gameObject.name = "cell " + otherCell.R + ", " + otherCell.C;
         }
     }
 }
