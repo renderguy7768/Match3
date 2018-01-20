@@ -49,6 +49,7 @@ namespace Assets.Scripts.Match3
             CellParent.ms_boxCollider2DSize = new Vector2(CellParent.ms_cellWidth - CellParent.ms_xPadding, CellParent.ms_cellHeight);
             CellParent.ms_boxCollider2DOffset = new Vector2(CellParent.ms_cellWidth, CellParent.ms_cellHeight) * 0.5f;
 
+            Cell.m_tileTypes = m_tileTypes;
             // Create cells
             for (var row = 0; row < m_height; ++row)
             {
@@ -56,7 +57,7 @@ namespace Assets.Scripts.Match3
                 {
                     // Creating parent gameobject with all required components
                     m_cellparents[row, column] = new CellParent(row, column, m_rectTransform);
-                    m_cellparents[row, column].m_cell.Setup(row, column, m_tileTypes);
+                    //m_cellparents[row, column].m_cell.Setup(row, column, m_tileTypes);
                     m_cellparents[row, column].m_cell.Clicked += OnCellClicked;
                     m_cellparents[row, column].m_cell.Released += OnCellReleased;
                 }
@@ -66,10 +67,10 @@ namespace Assets.Scripts.Match3
             StartCoroutine(PopulateField());
         }
 
-        public void SetCell(int r, int c, int tileType)
+        /*public void SetCell(int r, int c, int tileType)
         {
-            m_cellparents[r, c].m_cell.SetCell(tileType);
-        }
+
+        }*/
 
         public IEnumerator PopulateField()
         {
@@ -87,10 +88,11 @@ namespace Assets.Scripts.Match3
                         // Making a valid tile index list using the bits of valid Index
                         validIndex = ~validIndex;
                         validIndex &= m_validIndexMask;
-                        print(row + "," + column + "," + validIndex.ToString("X"));
+                        //print(row + "," + column + "," + validIndex.ToString("X"));
                         tileType = GenerateAValidTileIndexFromValidIndexBits(validIndex);
                     }
-                    SetCell(row, column, tileType);
+                    //SetCell(row, column, tileType);
+                    m_cellparents[row, column].m_cell.SetCell(tileType);
 
                     yield return null;
                 }
@@ -277,11 +279,18 @@ namespace Assets.Scripts.Match3
             // Find all matches, clear matches, fill in empty
             // cells and repeat until there are no matches.
 
-            var t1 = c1.TileIndex;
+            /*var t1 = c1.TileIndex;
             var t2 = c2.TileIndex;
 
             SetCell(c1.R, c1.C, t2);
-            SetCell(c2.R, c2.C, t1);
+            SetCell(c2.R, c2.C, t1);*/
+
+            var tempSiblingIndex = c1.transform.GetSiblingIndex();
+            c1.transform.SetSiblingIndex(c2.transform.GetSiblingIndex());
+            c2.transform.SetSiblingIndex(tempSiblingIndex);
+            Utility.Swap(ref m_cellparents[c1.R, c1.C], ref m_cellparents[c2.R, c2.C]);
+            c1.Swap(c2);
+
         }
     }
 }

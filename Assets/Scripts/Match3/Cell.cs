@@ -11,12 +11,17 @@ namespace Assets.Scripts.Match3
 {
     public class Cell : Graphic, IPointerDownHandler, IPointerUpHandler
     {
+        private const float MoveSpeed = 350.0f;
+
         public int R; //{ get; private set; }
         public int C; //{ get; private set; }
 
+        public Vector3 TargetPosition; //{ get; private set; }
+
         // Treating CellType as Bit Flag
         private uint _cellType;
-        public uint CellType {
+        public uint CellType
+        {
             get { return _cellType; }
             private set { _cellType = 1u << (int)value; }
         }
@@ -27,19 +32,19 @@ namespace Assets.Scripts.Match3
         public event Action<Vector2> Released;
 
         private RectTransform m_rectTransform;
-        private GameObject[] m_tileTypes;
+        public static GameObject[] m_tileTypes { private get; set; }
 
-        public void Setup(int x, int y, GameObject[] tileTypes)
+        public void Setup(int r, int c, float targetX, float targetY)
         {
-            m_tileTypes = tileTypes;
-
-            R = x;
-            C = y;
+            R = r;
+            C = c;
 
             _cellType = 0;
             TileIndex = -1;
 
             m_rectTransform = GetComponent<RectTransform>();
+
+            TargetPosition = new Vector3(targetX, targetY, 0);
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -93,6 +98,8 @@ namespace Assets.Scripts.Match3
             TileIndex = tileType;
         }
 
+
+
         ////////////////////////////////////////////////////////
         // Overrides for Graphic in order to have an invisible
         // UI Collider
@@ -105,6 +112,21 @@ namespace Assets.Scripts.Match3
         public override bool Raycast(Vector2 sp, Camera eventCamera)
         {
             return true;
+        }
+
+        private void Update()
+        {
+            rectTransform.localPosition = Vector3.MoveTowards(rectTransform.localPosition, TargetPosition, MoveSpeed * Time.deltaTime);
+        }
+
+        public void Swap(Cell otherCell)
+        {
+            Utility.Swap(ref R, ref otherCell.R);
+            Utility.Swap(ref C, ref otherCell.C);
+            Utility.Swap(ref TargetPosition, ref otherCell.TargetPosition);
+
+            gameObject.name = "cell " + R + ", " + C;
+            otherCell.gameObject.name = "cell " + otherCell.R + ", " + otherCell.C;
         }
     }
 }
