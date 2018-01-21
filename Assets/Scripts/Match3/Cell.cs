@@ -44,12 +44,9 @@ namespace Assets.Scripts.Match3
         private static GameObject[] ms_tileTypes;
         private static float ms_boardMinY;
 
-        public void Setup(int r, int c, float targetX, float targetY, bool shouldReset = false)
+        public void Setup(int r, int c, float targetX, float targetY)
         {
-            if (shouldReset)
-            {
-                ResetCell();
-            }
+            ResetCell();
 
             ThisCellInfo.R = r;
             ThisCellInfo.C = c;
@@ -88,6 +85,8 @@ namespace Assets.Scripts.Match3
 
         public void SetCell(int tileType)
         {
+            ResetCell();
+
             var tile = Instantiate(ms_tileTypes[tileType], transform);
 
             var tileRect = tile.GetComponent<RectTransform>();

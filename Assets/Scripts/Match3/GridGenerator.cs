@@ -39,6 +39,8 @@ namespace Assets.Scripts.Match3
         private Cell[,] m_cellsUnUsed;
         private List<Cell.CellInfo> m_matchedCellInfo;
         private float m_startHeightOffset;
+        private List<Cell> m_recheckList;
+        private List<Cell> m_refillList;
 
         private enum Direction : uint
         {
@@ -51,9 +53,9 @@ namespace Assets.Scripts.Match3
             VerticleAdjacent = ~HorizontalAdjacent
         }
 
-        private enum GameState { MoveAllowed, Wait }
+        public enum GameState { MoveAllowed, Wait }
 
-        private GameState _gameState;
+        public GameState _gameState;
 
         private uint m_validIndexMask;
 
@@ -85,6 +87,8 @@ namespace Assets.Scripts.Match3
             m_cells = new Cell[m_height, m_width];
             m_cellsUnUsed = new Cell[m_height, m_width];
             m_matchedCellInfo = new List<Cell.CellInfo>(m_height * m_width);
+            m_recheckList = new List<Cell>(m_height * m_width);
+            m_refillList = new List<Cell>(m_height * m_width);
 
             // Calculate layout values
             var cellWidth = ((int)m_rectTransform.rect.width) / m_width;
@@ -127,7 +131,7 @@ namespace Assets.Scripts.Match3
                     rectTransform.localPosition = new Vector3(xPos, yPos + m_startHeightOffset, 0);
 
                     m_cells[row, column] = newCell.AddComponent<Cell>();
-                    m_cells[row, column].Setup(row, column, xPos, yPos, true);
+                    m_cells[row, column].Setup(row, column, xPos, yPos);
                     m_cells[row, column].Clicked += OnCellClicked;
                     m_cells[row, column].Released += OnCellReleased;
                 }
@@ -382,6 +386,7 @@ namespace Assets.Scripts.Match3
             {
                 var row = cellinfo.R;
                 var col = cellinfo.C;
+                Cell cellToRefill = null;
                 for (int i = row + 1, j = row; i < m_height; i++, j++)
                 {
                     if (m_cellsUnUsed[j, col] == null) break;
@@ -396,15 +401,80 @@ namespace Assets.Scripts.Match3
                     if (i < m_height)
                     {
                         ActualSwap(m_cells[i, col], m_cells[j, col]);
-                        m_cellsUnUsed[i, col] = m_cells[i, col];
+                        if (!m_cells[j, col].IsMatched)
+                        {
+                            m_recheckList.Add(m_cells[j, col]);
+                        }
+                        cellToRefill = m_cellsUnUsed[i, col] = m_cells[i, col];
                         m_cells[i, col] = null;
                     }
 
                     yield return null;
                 }
+
+                if (cellToRefill != null)
+                {
+                    m_refillList.Add(cellToRefill);
+                }
             }
             m_matchedCellInfo.Clear();
-            _gameState = GameState.MoveAllowed;
+            if (m_recheckList.Count > 0)
+            {
+                StartCoroutine(ReCheck());
+            }
+            else
+            {
+                _gameState = GameState.MoveAllowed;
+            }
+        }
+
+        private IEnumerator ReCheck()
+        {
+            var checkCell = false;
+            foreach (var cell in m_recheckList)
+            {
+                var tempCell = cell;
+                yield return new WaitWhile(() => Vector3.Distance(tempCell.ThisCellInfo.TargetPosition, tempCell.rectTransform.localPosition) > m_epsison);
+                checkCell |= CheckForMatchesDuringGame(cell, Direction.Invalid);
+            }
+            m_recheckList.Clear();
+            if (checkCell)
+            {
+                yield return new WaitUntil(RemoveMatches);
+                StartCoroutine(CollapseColumns());
+            }
+            else
+            {
+                if (m_refillList.Count > 0)
+                {
+                    StartCoroutine(Refill());
+                }
+                else
+                {
+                    _gameState = GameState.MoveAllowed;
+                }
+            }
+        }
+
+        private IEnumerator Refill()
+        {
+            foreach (var cell in m_refillList)
+            {
+                m_recheckList.Add(cell);
+                cell.SetCell(Random.Range(0, m_tileTypePrefabs.Length));
+                m_cells[cell.ThisCellInfo.R, cell.ThisCellInfo.C] = cell;
+                m_cellsUnUsed[cell.ThisCellInfo.R, cell.ThisCellInfo.C] = null;
+                yield return null;
+            }
+            m_refillList.Clear();
+            if (m_recheckList.Count > 0)
+            {
+                StartCoroutine(ReCheck());
+            }
+            else
+            {
+                _gameState = GameState.MoveAllowed;
+            }
         }
 
         private bool CheckForMatchesDuringGame(Cell cellUnderCheck, Direction ignoreDirection)
@@ -522,6 +592,8 @@ namespace Assets.Scripts.Match3
                     return false;
             }
 
+            if (m_cells[r1, c1] == null || m_cells[r2, c2] == null) return false;
+
             if ((m_cells[r1, c1].CellType &
                  m_cells[r2, c2].CellType &
                  cellType) == 0) return false;
@@ -547,6 +619,11 @@ namespace Assets.Scripts.Match3
 
             Utility.Swap(ref m_cells[c1.ThisCellInfo.R, c1.ThisCellInfo.C], ref m_cells[c2.ThisCellInfo.R, c2.ThisCellInfo.C]);
             c1.Swap(c2);
+        }
+
+        private void Update()
+        {
+            var z = 0;
         }
     }
 }
