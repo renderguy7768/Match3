@@ -14,15 +14,15 @@ namespace Assets.Scripts.Match3
         private const float MinMoveSpeed = 350.0f;
         private const float MaxMoveSpeed = MinMoveSpeed + 100.0f;
 
-        public struct CellIndex
+        [Serializable]
+        public struct CellInfo
         {
             public int R;
             public int C;
-        }
-        public CellIndex ThisCellIndex;
 
-        private Vector3 _targetPosition;
-        public Vector3 TargetPosition { get { return _targetPosition; } }
+            public Vector3 TargetPosition;
+        }
+        public CellInfo ThisCellInfo;
 
         public Image ChildImage { get; private set; }
         public Color MatchColor { get; private set; }
@@ -44,18 +44,30 @@ namespace Assets.Scripts.Match3
         private static GameObject[] ms_tileTypes;
         private static float ms_boardMinY;
 
-        public void Setup(int r, int c, float targetX, float targetY)
+        public void Setup(int r, int c, float targetX, float targetY, bool shouldReset = false)
         {
-            ThisCellIndex.R = r;
-            ThisCellIndex.C = c;
+            if (shouldReset)
+            {
+                ResetCell();
+            }
 
+            ThisCellInfo.R = r;
+            ThisCellInfo.C = c;
+
+            ThisCellInfo.TargetPosition = new Vector3(targetX, targetY, 0);
+        }
+
+        private void ResetCell()
+        {
+            if (transform.childCount == 1)
+            {
+                Destroy(transform.GetChild(0).gameObject);
+            }
             _cellType = 0;
             TileIndex = -1;
             ChildImage = null;
             MatchColor = Color.clear;
             IsMatched = false;
-
-            _targetPosition = new Vector3(targetX, targetY, 0);
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -76,11 +88,6 @@ namespace Assets.Scripts.Match3
 
         public void SetCell(int tileType)
         {
-            if (transform.childCount == 1)
-            {
-                Destroy(transform.GetChild(0).gameObject);
-            }
-
             var tile = Instantiate(ms_tileTypes[tileType], transform);
 
             var tileRect = tile.GetComponent<RectTransform>();
@@ -105,19 +112,22 @@ namespace Assets.Scripts.Match3
 
         private void Update()
         {
+            if (IsMatched) return;
             var t = Mathf.Abs((rectTransform.localPosition.y - ms_boardMinY) / ms_boardMinY);
             var currentSpeed = Mathf.Lerp(MinMoveSpeed, MaxMoveSpeed, t);
-            rectTransform.localPosition = Vector3.MoveTowards(rectTransform.localPosition, TargetPosition,
-                currentSpeed * Time.deltaTime);
+            rectTransform.localPosition =
+                Vector3.MoveTowards(
+                    rectTransform.localPosition,
+                    ThisCellInfo.TargetPosition,
+                    currentSpeed * Time.deltaTime);
         }
 
         public void Swap(Cell otherCell)
         {
-            Utility.Swap(ref ThisCellIndex, ref otherCell.ThisCellIndex);
-            Utility.Swap(ref _targetPosition, ref otherCell._targetPosition);
+            Utility.Swap(ref ThisCellInfo, ref otherCell.ThisCellInfo);
 #if UNITY_EDITOR
-            gameObject.name = "cell " + ThisCellIndex.R + ", " + ThisCellIndex.C;
-            otherCell.gameObject.name = "cell " + otherCell.ThisCellIndex.R + ", " + otherCell.ThisCellIndex.C;
+            gameObject.name = "cell " + ThisCellInfo.R + ", " + ThisCellInfo.C;
+            otherCell.gameObject.name = "cell " + otherCell.ThisCellInfo.R + ", " + otherCell.ThisCellInfo.C;
 #endif
         }
 

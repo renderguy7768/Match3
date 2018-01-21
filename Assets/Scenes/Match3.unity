@@ -204,7 +204,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &196045458
 RectTransform:
   m_ObjectHideFlags: 0
@@ -669,6 +669,7 @@ MonoBehaviour:
   m_width: 9
   m_height: 9
   m_startHeightOffsetMultiplier: 1.25
+  RemoveTilesDelay: 0.5
 --- !u!1 &2022740963
 GameObject:
   m_ObjectHideFlags: 0

@@ -20,6 +20,10 @@ namespace Assets.Scripts.Match3
         [Range(1.0f, 20.0f)]
         public float m_startHeightOffsetMultiplier;
 
+        [Tooltip("Increase or decrease this to adjust the tile removal delay")]
+        [Range(0.5f, 5.0f)]
+        public float RemoveTilesDelay;
+
         private GameObject[] m_tileTypePrefabs;
 
         private RectTransform m_rectTransform;
@@ -31,6 +35,10 @@ namespace Assets.Scripts.Match3
 
         private const float m_minSqrSwipeThreshold = 10.0f * 10.0f;
         private const float m_epsison = float.Epsilon * 10.0f;
+
+        private Cell[,] m_cellsUnUsed;
+        private List<Cell.CellInfo> m_matchedCellInfo;
+        private float m_startHeightOffset;
 
         private enum Direction : uint
         {
@@ -75,6 +83,8 @@ namespace Assets.Scripts.Match3
             // Grab components and initialize arrays
             m_rectTransform = GetComponent<RectTransform>();
             m_cells = new Cell[m_height, m_width];
+            m_cellsUnUsed = new Cell[m_height, m_width];
+            m_matchedCellInfo = new List<Cell.CellInfo>(m_height * m_width);
 
             // Calculate layout values
             var cellWidth = ((int)m_rectTransform.rect.width) / m_width;
@@ -86,7 +96,7 @@ namespace Assets.Scripts.Match3
             var xOffsetPerCell = (m_rectTransform.rect.width + xPadding) * 0.5f;
             var yOffsetPerCell = (m_rectTransform.rect.height + yPadding) * 0.5f;
 
-            var startHeightOffset = m_rectTransform.rect.height * m_startHeightOffsetMultiplier;
+            m_startHeightOffset = m_rectTransform.rect.height * m_startHeightOffsetMultiplier;
 
             Cell.SetupStaticVariables(m_tileTypePrefabs, m_rectTransform.rect.yMin);
             // Create cells
@@ -114,10 +124,10 @@ namespace Assets.Scripts.Match3
                     };
                     var xPos = rect.x - xOffsetPerCell;
                     var yPos = rect.y - yOffsetPerCell;
-                    rectTransform.localPosition = new Vector3(xPos, yPos + startHeightOffset, 0);
+                    rectTransform.localPosition = new Vector3(xPos, yPos + m_startHeightOffset, 0);
 
                     m_cells[row, column] = newCell.AddComponent<Cell>();
-                    m_cells[row, column].Setup(row, column, xPos, yPos);
+                    m_cells[row, column].Setup(row, column, xPos, yPos, true);
                     m_cells[row, column].Clicked += OnCellClicked;
                     m_cells[row, column].Released += OnCellReleased;
                 }
@@ -153,7 +163,7 @@ namespace Assets.Scripts.Match3
             }
 
             var lastCell = m_cells[m_height - 1, m_width - 1];
-            yield return new WaitUntil(() => Vector3.Distance(lastCell.TargetPosition, lastCell.rectTransform.localPosition) < m_epsison);
+            yield return new WaitWhile(() => Vector3.Distance(lastCell.ThisCellInfo.TargetPosition, lastCell.rectTransform.localPosition) > m_epsison);
             _gameState = GameState.MoveAllowed;
         }
 
@@ -270,16 +280,16 @@ namespace Assets.Scripts.Match3
             switch (direction)
             {
                 case Direction.Left:
-                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R, m_firstClickedCell.ThisCellIndex.C - 1];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellInfo.R, m_firstClickedCell.ThisCellInfo.C - 1];
                     break;
                 case Direction.Right:
-                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R, m_firstClickedCell.ThisCellIndex.C + 1];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellInfo.R, m_firstClickedCell.ThisCellInfo.C + 1];
                     break;
                 case Direction.Up:
-                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R + 1, m_firstClickedCell.ThisCellIndex.C];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellInfo.R + 1, m_firstClickedCell.ThisCellInfo.C];
                     break;
                 case Direction.Down:
-                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R - 1, m_firstClickedCell.ThisCellIndex.C];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellInfo.R - 1, m_firstClickedCell.ThisCellInfo.C];
                     break;
             }
 
@@ -300,22 +310,22 @@ namespace Assets.Scripts.Match3
 
             var swipeAngle = Mathf.Atan2(deltaPressPosition.y, deltaPressPosition.x) * Mathf.Rad2Deg;
 
-            if (swipeAngle > -45.0f && swipeAngle <= 45.0f && clicked.ThisCellIndex.C < m_width - 1)
+            if (swipeAngle > -45.0f && swipeAngle <= 45.0f && clicked.ThisCellInfo.C < m_width - 1)
             {
                 return Direction.Right;
             }
 
-            if (swipeAngle > 45.0f && swipeAngle <= 135.0f && clicked.ThisCellIndex.R < m_height - 1)
+            if (swipeAngle > 45.0f && swipeAngle <= 135.0f && clicked.ThisCellInfo.R < m_height - 1)
             {
                 return Direction.Up;
             }
 
-            if ((swipeAngle > 135.0f || swipeAngle <= -135.0f) && clicked.ThisCellIndex.C > 0)
+            if ((swipeAngle > 135.0f || swipeAngle <= -135.0f) && clicked.ThisCellInfo.C > 0)
             {
                 return Direction.Left;
             }
 
-            if (swipeAngle > -135.0f && swipeAngle <= -45.0f && clicked.ThisCellIndex.R > 0)
+            if (swipeAngle > -135.0f && swipeAngle <= -45.0f && clicked.ThisCellInfo.R > 0)
             {
                 return Direction.Down;
             }
@@ -334,18 +344,65 @@ namespace Assets.Scripts.Match3
             ActualSwap(c1, c2);
             var checkCell1 = CheckForMatchesDuringGame(c1, d2);
             var checkCell2 = CheckForMatchesDuringGame(c2, d1);
-            yield return new WaitForSeconds(0.25f);
+            yield return new WaitForSeconds(RemoveTilesDelay);
             if (!checkCell1 && !checkCell2)
             {
                 ActualSwap(c2, c1);
+                _gameState = GameState.MoveAllowed;
             }
+            else
+            {
+                yield return new WaitUntil(RemoveMatches);
+                CollapseColumns();
+            }
+        }
+
+        private bool RemoveMatches()
+        {
+            foreach (var index in m_matchedCellInfo)
+            {
+                if (m_cells[index.R, index.C] == null) continue;
+
+                m_cells[index.R, index.C].IsMatched = true;
+
+                m_cellsUnUsed[index.R, index.C] = m_cells[index.R, index.C];
+
+                var previousPosition = m_cells[index.R, index.C].rectTransform.localPosition;
+                m_cells[index.R, index.C].rectTransform.localPosition = new Vector3(previousPosition.x, previousPosition.y + m_startHeightOffset, 0);
+
+                m_cells[index.R, index.C] = null;
+            }
+
+            return true;
+        }
+
+        private void CollapseColumns()
+        {
+            foreach (var cellinfo in m_matchedCellInfo)
+            {
+                var row = cellinfo.R;
+                var col = cellinfo.C;
+                for (int i = row + 1, j = row; i < m_height; i++, j++)
+                {
+                    if (m_cellsUnUsed[j, col] == null) break;
+                    m_cells[j, col] = m_cellsUnUsed[j, col];
+                    m_cellsUnUsed[j, col] = null;
+                    while (m_cells[i, col] == null)
+                    {
+                        i++;
+                    }
+                    ActualSwap(m_cells[i, col], m_cells[j, col]);
+                    m_cellsUnUsed[i, col] = m_cells[i, col];
+                }
+            }
+            m_matchedCellInfo.Clear();
             _gameState = GameState.MoveAllowed;
         }
 
         private bool CheckForMatchesDuringGame(Cell cellUnderCheck, Direction ignoreDirection)
         {
-            var row = cellUnderCheck.ThisCellIndex.R;
-            var column = cellUnderCheck.ThisCellIndex.C;
+            var row = cellUnderCheck.ThisCellInfo.R;
+            var column = cellUnderCheck.ThisCellInfo.C;
 
             var isMatchLeft = false;
             var isMatchRight = false;
@@ -460,8 +517,14 @@ namespace Assets.Scripts.Match3
             if ((m_cells[r1, c1].CellType &
                  m_cells[r2, c2].CellType &
                  cellType) == 0) return false;
+
             m_cells[r1, c1].ChildImage.color = m_cells[r2, c2].ChildImage.color =
                 m_cells[row, column].ChildImage.color = m_cells[row, column].MatchColor;
+
+            m_matchedCellInfo.Add(m_cells[r1, c1].ThisCellInfo);
+            m_matchedCellInfo.Add(m_cells[r2, c2].ThisCellInfo);
+            m_matchedCellInfo.Add(m_cells[row, column].ThisCellInfo);
+
             return true;
 
         }
@@ -474,7 +537,7 @@ namespace Assets.Scripts.Match3
             c2.transform.SetSiblingIndex(tempSiblingIndex);
 #endif
 
-            Utility.Swap(ref m_cells[c1.ThisCellIndex.R, c1.ThisCellIndex.C], ref m_cells[c2.ThisCellIndex.R, c2.ThisCellIndex.C]);
+            Utility.Swap(ref m_cells[c1.ThisCellInfo.R, c1.ThisCellInfo.C], ref m_cells[c2.ThisCellInfo.R, c2.ThisCellInfo.C]);
             c1.Swap(c2);
         }
     }
