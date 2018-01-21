@@ -387,12 +387,19 @@ namespace Assets.Scripts.Match3
                     if (m_cellsUnUsed[j, col] == null) break;
                     m_cells[j, col] = m_cellsUnUsed[j, col];
                     m_cellsUnUsed[j, col] = null;
-                    while (m_cells[i, col] == null)
+
+                    while (i < m_height && m_cells[i, col] == null)
                     {
                         i++;
                     }
-                    ActualSwap(m_cells[i, col], m_cells[j, col]);
-                    m_cellsUnUsed[i, col] = m_cells[i, col];
+
+                    if (i < m_height)
+                    {
+                        ActualSwap(m_cells[i, col], m_cells[j, col]);
+                        m_cellsUnUsed[i, col] = m_cells[i, col];
+                        m_cells[i, col] = null;
+                    }
+
                     yield return null;
                 }
             }
