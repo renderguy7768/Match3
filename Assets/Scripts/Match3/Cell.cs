@@ -14,16 +14,19 @@ namespace Assets.Scripts.Match3
         private const float MinMoveSpeed = 350.0f;
         private const float MaxMoveSpeed = MinMoveSpeed + 100.0f;
 
-        private int _r;
-        public int R { get { return _r; } }
-        private int _c;
-        public int C { get { return _c; } }
+        public struct CellIndex
+        {
+            public int R;
+            public int C;
+        }
+        public CellIndex ThisCellIndex;
+
         private Vector3 _targetPosition;
         public Vector3 TargetPosition { get { return _targetPosition; } }
 
-        public Image ChildImage;
-        public Color MatchColor;
-        public Color NotMatchedColor;
+        public Image ChildImage { get; private set; }
+        public Color MatchColor { get; private set; }
+        public bool IsMatched;
 
         // Treating CellType as Bit Flag
         private uint _cellType;
@@ -38,19 +41,19 @@ namespace Assets.Scripts.Match3
         public event Action<Cell, Vector2> Clicked;
         public event Action<Vector2> Released;
 
-        private RectTransform m_rectTransform;
-
         private static GameObject[] ms_tileTypes;
         private static float ms_boardMinY;
 
         public void Setup(int r, int c, float targetX, float targetY)
         {
-            _r = r;
-            _c = c;
+            ThisCellIndex.R = r;
+            ThisCellIndex.C = c;
 
-            ResetCell();
-
-            m_rectTransform = GetComponent<RectTransform>();
+            _cellType = 0;
+            TileIndex = -1;
+            ChildImage = null;
+            MatchColor = Color.clear;
+            IsMatched = false;
 
             _targetPosition = new Vector3(targetX, targetY, 0);
         }
@@ -71,27 +74,14 @@ namespace Assets.Scripts.Match3
             }
         }
 
-        private void ResetCell()
-        {
-            _cellType = 0;
-            TileIndex = -1;
-            ChildImage = null;
-            MatchColor = Color.clear;
-            NotMatchedColor = Color.clear;
-        }
-
-        private void ClearCell()
-        {
-            if (m_rectTransform.childCount != 1) return;
-            Destroy(m_rectTransform.GetChild(0).gameObject);
-            ResetCell();
-        }
-
         public void SetCell(int tileType)
         {
-            ClearCell();
+            if (transform.childCount == 1)
+            {
+                Destroy(transform.GetChild(0).gameObject);
+            }
 
-            var tile = Instantiate(ms_tileTypes[tileType], m_rectTransform);
+            var tile = Instantiate(ms_tileTypes[tileType], transform);
 
             var tileRect = tile.GetComponent<RectTransform>();
 
@@ -102,9 +92,9 @@ namespace Assets.Scripts.Match3
             CellType = (uint)tileType;
             TileIndex = tileType;
             ChildImage = tile.GetComponent<Image>();
-            NotMatchedColor = ChildImage.color;
-            MatchColor = new Color(NotMatchedColor.r, NotMatchedColor.g, NotMatchedColor.b,
-                NotMatchedColor.a * 0.5f);
+            var childColor = ChildImage.color;
+            MatchColor = new Color(childColor.r, childColor.g, childColor.b,
+                childColor.a * 0.5f);
         }
 
         public static void SetupStaticVariables(GameObject[] tileTypes, float boardHeight)
@@ -123,13 +113,11 @@ namespace Assets.Scripts.Match3
 
         public void Swap(Cell otherCell)
         {
-            Utility.Swap(ref _r, ref otherCell._r);
-            Utility.Swap(ref _c, ref otherCell._c);
+            Utility.Swap(ref ThisCellIndex, ref otherCell.ThisCellIndex);
             Utility.Swap(ref _targetPosition, ref otherCell._targetPosition);
-
 #if UNITY_EDITOR
-            gameObject.name = "cell " + R + ", " + C;
-            otherCell.gameObject.name = "cell " + otherCell.R + ", " + otherCell.C;
+            gameObject.name = "cell " + ThisCellIndex.R + ", " + ThisCellIndex.C;
+            otherCell.gameObject.name = "cell " + otherCell.ThisCellIndex.R + ", " + otherCell.ThisCellIndex.C;
 #endif
         }
 

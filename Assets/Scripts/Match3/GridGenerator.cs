@@ -270,16 +270,16 @@ namespace Assets.Scripts.Match3
             switch (direction)
             {
                 case Direction.Left:
-                    otherCell = m_cells[m_firstClickedCell.R, m_firstClickedCell.C - 1];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R, m_firstClickedCell.ThisCellIndex.C - 1];
                     break;
                 case Direction.Right:
-                    otherCell = m_cells[m_firstClickedCell.R, m_firstClickedCell.C + 1];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R, m_firstClickedCell.ThisCellIndex.C + 1];
                     break;
                 case Direction.Up:
-                    otherCell = m_cells[m_firstClickedCell.R + 1, m_firstClickedCell.C];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R + 1, m_firstClickedCell.ThisCellIndex.C];
                     break;
                 case Direction.Down:
-                    otherCell = m_cells[m_firstClickedCell.R - 1, m_firstClickedCell.C];
+                    otherCell = m_cells[m_firstClickedCell.ThisCellIndex.R - 1, m_firstClickedCell.ThisCellIndex.C];
                     break;
             }
 
@@ -300,22 +300,22 @@ namespace Assets.Scripts.Match3
 
             var swipeAngle = Mathf.Atan2(deltaPressPosition.y, deltaPressPosition.x) * Mathf.Rad2Deg;
 
-            if (swipeAngle > -45.0f && swipeAngle <= 45.0f && clicked.C < m_width - 1)
+            if (swipeAngle > -45.0f && swipeAngle <= 45.0f && clicked.ThisCellIndex.C < m_width - 1)
             {
                 return Direction.Right;
             }
 
-            if (swipeAngle > 45.0f && swipeAngle <= 135.0f && clicked.R < m_height - 1)
+            if (swipeAngle > 45.0f && swipeAngle <= 135.0f && clicked.ThisCellIndex.R < m_height - 1)
             {
                 return Direction.Up;
             }
 
-            if ((swipeAngle > 135.0f || swipeAngle <= -135.0f) && clicked.C > 0)
+            if ((swipeAngle > 135.0f || swipeAngle <= -135.0f) && clicked.ThisCellIndex.C > 0)
             {
                 return Direction.Left;
             }
 
-            if (swipeAngle > -135.0f && swipeAngle <= -45.0f && clicked.R > 0)
+            if (swipeAngle > -135.0f && swipeAngle <= -45.0f && clicked.ThisCellIndex.R > 0)
             {
                 return Direction.Down;
             }
@@ -344,8 +344,8 @@ namespace Assets.Scripts.Match3
 
         private bool CheckForMatchesDuringGame(Cell cellUnderCheck, Direction ignoreDirection)
         {
-            var row = cellUnderCheck.R;
-            var column = cellUnderCheck.C;
+            var row = cellUnderCheck.ThisCellIndex.R;
+            var column = cellUnderCheck.ThisCellIndex.C;
 
             var isMatchLeft = false;
             var isMatchRight = false;
@@ -460,9 +460,8 @@ namespace Assets.Scripts.Match3
             if ((m_cells[r1, c1].CellType &
                  m_cells[r2, c2].CellType &
                  cellType) == 0) return false;
-            m_cells[r1, c1].ChildImage.color = m_cells[r1, c1].MatchColor;
-            m_cells[r2, c2].ChildImage.color = m_cells[r2, c2].MatchColor;
-            m_cells[row, column].ChildImage.color = m_cells[row, column].MatchColor;
+            m_cells[r1, c1].ChildImage.color = m_cells[r2, c2].ChildImage.color =
+                m_cells[row, column].ChildImage.color = m_cells[row, column].MatchColor;
             return true;
 
         }
@@ -475,7 +474,7 @@ namespace Assets.Scripts.Match3
             c2.transform.SetSiblingIndex(tempSiblingIndex);
 #endif
 
-            Utility.Swap(ref m_cells[c1.R, c1.C], ref m_cells[c2.R, c2.C]);
+            Utility.Swap(ref m_cells[c1.ThisCellIndex.R, c1.ThisCellIndex.C], ref m_cells[c2.ThisCellIndex.R, c2.ThisCellIndex.C]);
             c1.Swap(c2);
         }
     }
