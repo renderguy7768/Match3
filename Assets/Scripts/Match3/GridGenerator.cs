@@ -353,7 +353,7 @@ namespace Assets.Scripts.Match3
             else
             {
                 yield return new WaitUntil(RemoveMatches);
-                CollapseColumns();
+                StartCoroutine(CollapseColumns());
             }
         }
 
@@ -376,7 +376,7 @@ namespace Assets.Scripts.Match3
             return true;
         }
 
-        private void CollapseColumns()
+        private IEnumerator CollapseColumns()
         {
             foreach (var cellinfo in m_matchedCellInfo)
             {
@@ -393,6 +393,7 @@ namespace Assets.Scripts.Match3
                     }
                     ActualSwap(m_cells[i, col], m_cells[j, col]);
                     m_cellsUnUsed[i, col] = m_cells[i, col];
+                    yield return null;
                 }
             }
             m_matchedCellInfo.Clear();
