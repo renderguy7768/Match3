@@ -21,6 +21,10 @@ namespace Assets.Scripts.Match3
         private Vector3 _targetPosition;
         public Vector3 TargetPosition { get { return _targetPosition; } }
 
+        public Image ChildImage;
+        public Color MatchColor;
+        public Color NotMatchedColor;
+
         // Treating CellType as Bit Flag
         private uint _cellType;
         public uint CellType
@@ -44,8 +48,7 @@ namespace Assets.Scripts.Match3
             _r = r;
             _c = c;
 
-            _cellType = 0;
-            TileIndex = -1;
+            ResetCell();
 
             m_rectTransform = GetComponent<RectTransform>();
 
@@ -68,15 +71,20 @@ namespace Assets.Scripts.Match3
             }
         }
 
-        private void ClearCell()
+        private void ResetCell()
         {
-            if (m_rectTransform.childCount == 1)
-            {
-                Destroy(m_rectTransform.GetChild(0).gameObject);
-            }
-
             _cellType = 0;
             TileIndex = -1;
+            ChildImage = null;
+            MatchColor = Color.clear;
+            NotMatchedColor = Color.clear;
+        }
+
+        private void ClearCell()
+        {
+            if (m_rectTransform.childCount != 1) return;
+            Destroy(m_rectTransform.GetChild(0).gameObject);
+            ResetCell();
         }
 
         public void SetCell(int tileType)
@@ -93,6 +101,10 @@ namespace Assets.Scripts.Match3
 
             CellType = (uint)tileType;
             TileIndex = tileType;
+            ChildImage = tile.GetComponent<Image>();
+            NotMatchedColor = ChildImage.color;
+            MatchColor = new Color(NotMatchedColor.r, NotMatchedColor.g, NotMatchedColor.b,
+                NotMatchedColor.a * 0.5f);
         }
 
         public static void SetupStaticVariables(GameObject[] tileTypes, float boardHeight)

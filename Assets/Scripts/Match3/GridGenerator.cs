@@ -25,14 +25,23 @@ namespace Assets.Scripts.Match3
         private RectTransform m_rectTransform;
         private Cell[,] m_cells;
 
-        private Cell m_lastClicked;
+        private Cell m_firstClickedCell;
         private Vector2 m_initialPressPosition;
         private Vector2 m_finalPressPosition;
 
         private const float m_minSqrSwipeThreshold = 10.0f * 10.0f;
         private const float m_epsison = float.Epsilon * 10.0f;
 
-        private enum Direction { Invalid, Left, Right, Up, Down }
+        private enum Direction : uint
+        {
+            Invalid = 0u,
+            Left = 1u,
+            Right = ~Left,
+            Up = 2u,
+            Down = ~Up,
+            HorizontalAdjacent = 3u,
+            VerticleAdjacent = ~HorizontalAdjacent
+        }
 
         private enum GameState { MoveAllowed, Wait }
 
@@ -202,10 +211,6 @@ namespace Assets.Scripts.Match3
                     c1 = column - 1;
                     c2 = column - 2;
                     break;
-                case Direction.Right:
-                    break;
-                case Direction.Up:
-                    break;
                 case Direction.Down:
                     c1 = c2 = column;
                     r1 = row - 1;
@@ -229,10 +234,6 @@ namespace Assets.Scripts.Match3
                     c1 = column - 1;
                     c2 = column - 2;
                     break;
-                case Direction.Right:
-                    break;
-                case Direction.Up:
-                    break;
                 case Direction.Down:
                     c1 = c2 = column;
                     r1 = row - 1;
@@ -254,39 +255,41 @@ namespace Assets.Scripts.Match3
 
         private void OnCellClicked(Cell clicked, Vector2 currentPointerPosition)
         {
-            if (m_lastClicked != null || _gameState == GameState.Wait) return;
-            m_lastClicked = clicked;
+            if (m_firstClickedCell != null || _gameState == GameState.Wait) return;
+            m_firstClickedCell = clicked;
             m_initialPressPosition = currentPointerPosition;
         }
 
         private void OnCellReleased(Vector2 currentPointerPosition)
         {
-            if (m_lastClicked == null) return;
+            if (m_firstClickedCell == null) return;
             m_finalPressPosition = currentPointerPosition;
             Cell otherCell = null;
-            var direction = GetDirection(m_lastClicked);
+            var direction = GetDirection(m_firstClickedCell);
+
             switch (direction)
             {
                 case Direction.Left:
-                    otherCell = m_cells[m_lastClicked.R, m_lastClicked.C - 1];
+                    otherCell = m_cells[m_firstClickedCell.R, m_firstClickedCell.C - 1];
                     break;
                 case Direction.Right:
-                    otherCell = m_cells[m_lastClicked.R, m_lastClicked.C + 1];
+                    otherCell = m_cells[m_firstClickedCell.R, m_firstClickedCell.C + 1];
                     break;
                 case Direction.Up:
-                    otherCell = m_cells[m_lastClicked.R + 1, m_lastClicked.C];
+                    otherCell = m_cells[m_firstClickedCell.R + 1, m_firstClickedCell.C];
                     break;
                 case Direction.Down:
-                    otherCell = m_cells[m_lastClicked.R - 1, m_lastClicked.C];
+                    otherCell = m_cells[m_firstClickedCell.R - 1, m_firstClickedCell.C];
                     break;
             }
 
             if (otherCell != null)
             {
-                TrySwap(m_lastClicked, otherCell);
+                var otherDirection = ~direction;
+                StartCoroutine(TrySwap(m_firstClickedCell, otherCell, direction, otherDirection));
             }
 
-            m_lastClicked = null;
+            m_firstClickedCell = null;
         }
 
         private Direction GetDirection(Cell clicked)
@@ -320,14 +323,152 @@ namespace Assets.Scripts.Match3
             return Direction.Invalid;
         }
 
-        private void TrySwap(Cell c1, Cell c2)
+        private IEnumerator TrySwap(Cell c1, Cell c2, Direction d1, Direction d2)
         {
             // TODO: Swapping should only occur if the swap
             // will result in a match.
             // If the swap is valid then the Grid should
             // Find all matches, clear matches, fill in empty
             // cells and repeat until there are no matches.
+            _gameState = GameState.Wait;
+            ActualSwap(c1, c2);
+            var checkCell1 = CheckForMatchesDuringGame(c1, d2);
+            var checkCell2 = CheckForMatchesDuringGame(c2, d1);
+            yield return new WaitForSeconds(0.25f);
+            if (!checkCell1 && !checkCell2)
+            {
+                ActualSwap(c2, c1);
+            }
+            _gameState = GameState.MoveAllowed;
+        }
 
+        private bool CheckForMatchesDuringGame(Cell cellUnderCheck, Direction ignoreDirection)
+        {
+            var row = cellUnderCheck.R;
+            var column = cellUnderCheck.C;
+
+            var isMatchLeft = false;
+            var isMatchRight = false;
+            var isMatchUp = false;
+            var isMatchDown = false;
+            var isMatchHorizontalAdjacent = false;
+            var isMatchVerticleAdjacent = false;
+
+            if (row > 1 && row < m_height - 2)
+            {
+                // check up & down if it does not match ignore dir
+                if (ignoreDirection != Direction.Up)
+                {
+                    isMatchUp = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Up);
+                }
+                if (ignoreDirection != Direction.Down)
+                {
+                    isMatchDown = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Down);
+                }
+            }
+            else if (row <= 1 && ignoreDirection != Direction.Up)
+            {
+                // check up 
+                isMatchUp = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Up);
+            }
+            else if (row >= m_height - 2 && ignoreDirection != Direction.Down)
+            {
+                // check down
+                isMatchDown = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Down);
+            }
+
+            if (column > 1 && column < m_width - 2)
+            {
+                // check left & right if it does not match ignore dir
+                if (ignoreDirection != Direction.Left)
+                {
+                    isMatchLeft = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Left);
+                }
+                if (ignoreDirection != Direction.Right)
+                {
+                    isMatchRight = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Right);
+                }
+            }
+            else if (column <= 1 && ignoreDirection != Direction.Right)
+            {
+                // check right 
+                isMatchRight = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Right);
+            }
+            else if (column >= m_height - 2 && ignoreDirection != Direction.Left)
+            {
+                // check left
+                isMatchLeft = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.Left);
+            }
+
+            if (row > 0 && row < m_height - 1)
+            {
+                isMatchVerticleAdjacent = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.VerticleAdjacent);
+            }
+
+            if (column > 0 && column < m_width - 1)
+            {
+                isMatchHorizontalAdjacent = CheckMatch3DuringGame(row, column, cellUnderCheck.CellType, Direction.HorizontalAdjacent);
+            }
+
+            return isMatchLeft || isMatchRight || isMatchUp || isMatchDown || isMatchHorizontalAdjacent ||
+                   isMatchVerticleAdjacent;
+        }
+
+        private bool CheckMatch3DuringGame(int row, int column, uint cellType, Direction direction)
+        {
+            var r1 = -1;
+            var c1 = -1;
+            var r2 = -1;
+            var c2 = -1;
+            switch (direction)
+            {
+                case Direction.Left:
+                    r1 = r2 = row;
+                    c1 = column - 1;
+                    c2 = column - 2;
+                    break;
+                case Direction.Right:
+                    r1 = r2 = row;
+                    c1 = column + 1;
+                    c2 = column + 2;
+                    break;
+                case Direction.Up:
+                    c1 = c2 = column;
+                    r1 = row + 1;
+                    r2 = row + 2;
+                    break;
+                case Direction.Down:
+                    c1 = c2 = column;
+                    r1 = row - 1;
+                    r2 = row - 2;
+                    break;
+                case Direction.HorizontalAdjacent:
+                    r1 = r2 = row;
+                    c1 = column - 1;
+                    c2 = column + 1;
+                    break;
+                case Direction.VerticleAdjacent:
+                    c1 = c2 = column;
+                    r1 = row - 1;
+                    r2 = row + 1;
+                    break;
+                default:
+                    Debug.Assert(false, "This should not happen. Invalid Direction");
+                    return false;
+            }
+
+            if ((m_cells[r1, c1].CellType &
+                 m_cells[r2, c2].CellType &
+                 cellType) == 0) return false;
+            m_cells[r1, c1].ChildImage.color = m_cells[r1, c1].MatchColor;
+            m_cells[r2, c2].ChildImage.color = m_cells[r2, c2].MatchColor;
+            m_cells[row, column].ChildImage.color = m_cells[row, column].MatchColor;
+            return true;
+
+        }
+
+        private void ActualSwap(Cell c1, Cell c2)
+        {
 #if UNITY_EDITOR
             var tempSiblingIndex = c1.transform.GetSiblingIndex();
             c1.transform.SetSiblingIndex(c2.transform.GetSiblingIndex());
@@ -336,7 +477,6 @@ namespace Assets.Scripts.Match3
 
             Utility.Swap(ref m_cells[c1.R, c1.C], ref m_cells[c2.R, c2.C]);
             c1.Swap(c2);
-
         }
     }
 }
