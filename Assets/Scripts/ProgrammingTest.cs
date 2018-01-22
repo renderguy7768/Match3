@@ -49,6 +49,7 @@ The things I would do better if I had more time:
 Improve re-filling of the board.
 Remove the extra array used, if possible, to cache unused refs of tiles.
 Improve tile falling as it is a bit stupid as of now. Re-ordering is needed.
+Better scoring system.
 
 */
 
