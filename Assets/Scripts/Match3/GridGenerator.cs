@@ -41,6 +41,7 @@ namespace Assets.Scripts.Match3
         private List<Cell.CellInfo> m_matchedCellInfo;
         private float m_startHeightOffset;
         private List<Cell> m_recheckList;
+        private uint _score = 0;
 
         private enum Direction : uint
         {
@@ -599,6 +600,9 @@ namespace Assets.Scripts.Match3
             m_matchedCellInfo.Add(m_cells[r1, c1].ThisCellInfo);
             m_matchedCellInfo.Add(m_cells[r2, c2].ThisCellInfo);
             m_matchedCellInfo.Add(m_cells[row, column].ThisCellInfo);
+
+            _score += 3;
+            Score.OnScoreChanged.Invoke(_score);
 
             return true;
 
