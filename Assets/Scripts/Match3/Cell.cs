@@ -1,127 +1,136 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Assets.Scripts.Match3
 {
-    public class Cell : Graphic, IPointerClickHandler
+    public class Cell : Graphic, IPointerDownHandler, IPointerUpHandler
     {
-        public int X;//{ get; private set; }
-        public int Y; //{ get; private set; }
+        private const float InitMinMoveSpeed = 350.0f;
+        private const float InitMaxMoveSpeed = InitMinMoveSpeed + 100.0f;
 
-        public int CellType { get; private set; }
-        public event Action<Cell> Clicked;
-        public event Action<Cell> Destroyed;
+        private const float GameMinMoveSpeed = InitMinMoveSpeed * 2.0f;
+        private const float GameMaxMoveSpeed = GameMinMoveSpeed + 100.0f;
 
-        private RectTransform m_rectTransform;
-        private GameObject[] m_tileTypes;
+        public static bool IsBoardPopulated;
 
-        public void Setup(int x, int y, GameObject[] tileTypes)
+        [Serializable]
+        public struct CellInfo
         {
-            m_tileTypes = tileTypes;
+            public int R;
+            public int C;
 
-            X = x;
-            Y = y;
+            public Vector3 TargetPosition;
+        }
+        public CellInfo ThisCellInfo;
 
-            CellType = -1;
+        public Image ChildImage { get; private set; }
+        public Color MatchColor { get; private set; }
+        public bool IsMatched { get; set; }
 
-            m_rectTransform = GetComponent<RectTransform>();
+        // Treating CellType as Bit Flag
+        private uint _cellType;
+        public uint CellType
+        {
+            get { return _cellType; }
+            private set { _cellType = 1u << (int)value; }
         }
 
-        public void OnPointerClick(PointerEventData eventData)
+        public int TileIndex { get; private set; }
+
+        public event Action<Cell, Vector2> Clicked;
+        public event Action<Vector2> Released;
+
+        private static GameObject[] ms_tileTypes;
+        private static float ms_boardMinY;
+
+        public void Setup(int r, int c, float targetX, float targetY)
+        {
+            ResetCell();
+
+            ThisCellInfo.R = r;
+            ThisCellInfo.C = c;
+
+            ThisCellInfo.TargetPosition = new Vector3(targetX, targetY, 0);
+        }
+
+        private void ResetCell()
+        {
+            if (transform.childCount == 1)
+            {
+                Destroy(transform.GetChild(0).gameObject);
+            }
+            _cellType = 0;
+            TileIndex = -1;
+            ChildImage = null;
+            MatchColor = Color.clear;
+            IsMatched = false;
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
         {
             if (Clicked != null && eventData.button == PointerEventData.InputButton.Left)
             {
-                Clicked(this);
-            }
-            else if (Destroyed != null && eventData.button == PointerEventData.InputButton.Right)
-            {
-                Destroyed(this);
+                Clicked(this, eventData.position);
             }
         }
 
-        public void SetCellType(int to)
+        public void OnPointerUp(PointerEventData eventData)
         {
-            CellType = to;
-        }
-
-        public void ClearCell()
-        {
-            if (m_rectTransform.childCount == 1)
+            if (Released != null && eventData.button == PointerEventData.InputButton.Left)
             {
-                Destroy(m_rectTransform.GetChild(0).gameObject);
+                Released(eventData.position);
             }
-
-            CellType = -1;
         }
 
         public void SetCell(int tileType)
         {
-            ClearCell();
+            ResetCell();
 
-            var tile = Instantiate(m_tileTypes[tileType], m_rectTransform);
+            var tile = Instantiate(ms_tileTypes[tileType], transform);
 
             var tileRect = tile.GetComponent<RectTransform>();
-            var prefabRect = m_tileTypes[tileType].GetComponent<RectTransform>();
 
-            tileRect.localScale = prefabRect.localScale;
+            tileRect.localScale = Vector3.one;
+            tileRect.sizeDelta = Vector2.zero;
+            tileRect.anchoredPosition = Vector2.zero;
 
-            tileRect.sizeDelta = prefabRect.sizeDelta;
-            tileRect.anchoredPosition = prefabRect.anchoredPosition;
-
-            CellType = tileType;
+            CellType = (uint)tileType;
+            TileIndex = tileType;
+            ChildImage = tile.GetComponent<Image>();
+            var childColor = ChildImage.color;
+            MatchColor = new Color(childColor.r, childColor.g, childColor.b,
+                childColor.a * 0.5f);
         }
 
-        public void MoveCells(List<Cell> cellsToBeMoved)
+        public static void SetupStaticVariables(GameObject[] tileTypes, float boardHeight)
         {
-            ClearCell();
-            var nextParent = m_rectTransform;
-            for (var i = 0; i < cellsToBeMoved.Count; i++)
-            {
-                var previousChild = cellsToBeMoved[i].m_rectTransform.GetChild(0).GetComponent<RectTransform>();
-                previousChild.SetParent(nextParent);
-                previousChild.anchoredPosition = Vector2.zero;
-                nextParent = cellsToBeMoved[i].m_rectTransform;
-            }
+            ms_tileTypes = tileTypes;
+            ms_boardMinY = boardHeight;
+        }
 
-            
-            //var previousTileType = CellType;
-            /*
-            var previousTileRect = previousRectTranform.GetChild(0).GetComponent<RectTransform>();
-            var previousLocalScale = previousTileRect.localScale;
-            var previousSizeDelta = previousTileRect.sizeDelta;
-            var previousAnchoredPosition = previousTileRect.anchoredPosition;
+        private void Update()
+        {
+            if (IsMatched) return;
+            var t = Mathf.Abs((rectTransform.localPosition.y - ms_boardMinY) / ms_boardMinY);
+            var currentSpeed = IsBoardPopulated
+                ? Mathf.Lerp(GameMinMoveSpeed, GameMaxMoveSpeed, t)
+                : Mathf.Lerp(InitMinMoveSpeed, InitMaxMoveSpeed, t);
+            rectTransform.localPosition =
+                Vector3.MoveTowards(
+                    rectTransform.localPosition,
+                    ThisCellInfo.TargetPosition,
+                    currentSpeed * Time.deltaTime);
+        }
 
-            
-
-            foreach (var cell in cellsToBeMoved)
-            {
-                previousTileRect.SetParent(previousRectTranform);
-                previousTileRect.localScale = previousLocalScale;
-                previousTileRect.sizeDelta = previousSizeDelta;
-                previousTileRect.anchoredPosition = previousAnchoredPosition;
-                previousRectTranform = cell.m_rectTransform;
-                previousTileRect = previousRectTranform.GetChild(0).GetComponent<RectTransform>();
-                previousLocalScale = previousTileRect.localScale;
-                previousSizeDelta = previousTileRect.sizeDelta;
-                previousAnchoredPosition = previousTileRect.anchoredPosition;
-            }*/
-
-            //var tile = Instantiate(m_tileTypes[tileType], m_rectTransform);
-
-            //var tileRect = tile.GetComponent<RectTransform>();
-            /*var prefabRect = m_tileTypes[tileType].GetComponent<RectTransform>();
-
-            tileRect.localScale = prefabRect.localScale;
-
-            tileRect.sizeDelta = prefabRect.sizeDelta;
-            tileRect.anchoredPosition = prefabRect.anchoredPosition;
-
-            CellType = tileType;*/
-
-
+        public void Swap(Cell otherCell)
+        {
+            Utility.Swap(ref ThisCellInfo, ref otherCell.ThisCellInfo);
+#if UNITY_EDITOR
+            gameObject.name = "cell " + ThisCellInfo.R + ", " + ThisCellInfo.C;
+            otherCell.gameObject.name = "cell " + otherCell.ThisCellInfo.R + ", " + otherCell.ThisCellInfo.C;
+#endif
         }
 
         ////////////////////////////////////////////////////////
