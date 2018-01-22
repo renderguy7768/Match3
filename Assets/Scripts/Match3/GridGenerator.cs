@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Assets.Scripts.Match3
@@ -53,7 +54,7 @@ namespace Assets.Scripts.Match3
             VerticleAdjacent = ~HorizontalAdjacent
         }
 
-        public enum GameState { MoveAllowed, Wait }
+        public enum GameState { Move, Wait }
 
         public GameState _gameState;
 
@@ -168,7 +169,7 @@ namespace Assets.Scripts.Match3
 
             var lastCell = m_cells[m_height - 1, m_width - 1];
             yield return new WaitWhile(() => Vector3.Distance(lastCell.ThisCellInfo.TargetPosition, lastCell.rectTransform.localPosition) > m_epsison);
-            _gameState = GameState.MoveAllowed;
+            _gameState = GameState.Move;
         }
 
         private int GenerateAValidTileIndexFromValidIndexBits(uint validIndex)
@@ -352,7 +353,7 @@ namespace Assets.Scripts.Match3
             if (!checkCell1 && !checkCell2)
             {
                 ActualSwap(c2, c1);
-                _gameState = GameState.MoveAllowed;
+                _gameState = GameState.Move;
             }
             else
             {
@@ -363,6 +364,9 @@ namespace Assets.Scripts.Match3
 
         private bool RemoveMatches()
         {
+            m_matchedCellInfo = m_matchedCellInfo.Select(info => info).Distinct().ToList();
+            m_matchedCellInfo.Sort((info1, info2) =>
+            (info1.R * m_height + info1.C).CompareTo(info2.R * m_height + info2.C));
             foreach (var index in m_matchedCellInfo)
             {
                 if (m_cells[index.R, index.C] == null) continue;
@@ -424,7 +428,7 @@ namespace Assets.Scripts.Match3
             }
             else
             {
-                _gameState = GameState.MoveAllowed;
+                _gameState = GameState.Move;
             }
         }
 
@@ -451,14 +455,16 @@ namespace Assets.Scripts.Match3
                 }
                 else
                 {
-                    _gameState = GameState.MoveAllowed;
+                    _gameState = GameState.Move;
                 }
             }
         }
 
         private IEnumerator Refill()
         {
-            foreach (var cell in m_refillList)
+            m_refillList.Sort((c1, c2) =>
+                (c1.ThisCellInfo.R * m_height + c1.ThisCellInfo.C).CompareTo(c2.ThisCellInfo.R * m_height + c2.ThisCellInfo.C));
+            /*foreach (var cell in m_refillList)
             {
                 m_recheckList.Add(cell);
                 cell.SetCell(Random.Range(0, m_tileTypePrefabs.Length));
@@ -473,8 +479,9 @@ namespace Assets.Scripts.Match3
             }
             else
             {
-                _gameState = GameState.MoveAllowed;
-            }
+                _gameState = GameState.Move;
+            }*/
+            yield return null;
         }
 
         private bool CheckForMatchesDuringGame(Cell cellUnderCheck, Direction ignoreDirection)
@@ -619,11 +626,6 @@ namespace Assets.Scripts.Match3
 
             Utility.Swap(ref m_cells[c1.ThisCellInfo.R, c1.ThisCellInfo.C], ref m_cells[c2.ThisCellInfo.R, c2.ThisCellInfo.C]);
             c1.Swap(c2);
-        }
-
-        private void Update()
-        {
-            var z = 0;
         }
     }
 }
