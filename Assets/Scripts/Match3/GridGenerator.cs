@@ -41,7 +41,6 @@ namespace Assets.Scripts.Match3
         private List<Cell.CellInfo> m_matchedCellInfo;
         private float m_startHeightOffset;
         private List<Cell> m_recheckList;
-        private List<Cell> m_refillList;
 
         private enum Direction : uint
         {
@@ -54,9 +53,9 @@ namespace Assets.Scripts.Match3
             VerticleAdjacent = ~HorizontalAdjacent
         }
 
-        public enum GameState { Move, Wait }
+        private enum GameState { Move, Wait }
 
-        public GameState _gameState;
+        private GameState _gameState;
 
         private uint m_validIndexMask;
 
@@ -71,6 +70,7 @@ namespace Assets.Scripts.Match3
 
             // Setting initial Gamestate
             _gameState = GameState.Wait;
+            Cell.IsBoardPopulated = false;
         }
 
         private void Start()
@@ -89,7 +89,6 @@ namespace Assets.Scripts.Match3
             m_cellsUnUsed = new Cell[m_height, m_width];
             m_matchedCellInfo = new List<Cell.CellInfo>(m_height * m_width);
             m_recheckList = new List<Cell>(m_height * m_width);
-            m_refillList = new List<Cell>(m_height * m_width);
 
             // Calculate layout values
             var cellWidth = ((int)m_rectTransform.rect.width) / m_width;
@@ -144,9 +143,6 @@ namespace Assets.Scripts.Match3
 
         private IEnumerator PopulateField()
         {
-            // TODO: Randomly set the cells to different tile types
-            // Algorithm should ensure that there is at least one valid
-            // swap and that there are existing no matches.
             for (var row = 0; row < m_height; ++row)
             {
                 for (var column = 0; column < m_width; ++column)
@@ -158,7 +154,6 @@ namespace Assets.Scripts.Match3
                         // Making a valid tile index list using the bits of valid Index
                         validIndex = ~validIndex;
                         validIndex &= m_validIndexMask;
-                        //print(row + "," + column + "," + validIndex.ToString("X"));
                         tileType = GenerateAValidTileIndexFromValidIndexBits(validIndex);
                     }
                     m_cells[row, column].SetCell(tileType);
@@ -170,6 +165,7 @@ namespace Assets.Scripts.Match3
             var lastCell = m_cells[m_height - 1, m_width - 1];
             yield return new WaitWhile(() => Vector3.Distance(lastCell.ThisCellInfo.TargetPosition, lastCell.rectTransform.localPosition) > m_epsison);
             _gameState = GameState.Move;
+            Cell.IsBoardPopulated = true;
         }
 
         private int GenerateAValidTileIndexFromValidIndexBits(uint validIndex)
@@ -340,11 +336,6 @@ namespace Assets.Scripts.Match3
 
         private IEnumerator TrySwap(Cell c1, Cell c2, Direction d1, Direction d2)
         {
-            // TODO: Swapping should only occur if the swap
-            // will result in a match.
-            // If the swap is valid then the Grid should
-            // Find all matches, clear matches, fill in empty
-            // cells and repeat until there are no matches.
             _gameState = GameState.Wait;
             ActualSwap(c1, c2);
             var checkCell1 = CheckForMatchesDuringGame(c1, d2);
@@ -364,7 +355,7 @@ namespace Assets.Scripts.Match3
 
         private bool RemoveMatches()
         {
-            m_matchedCellInfo = m_matchedCellInfo.Select(info => info).Distinct().ToList();
+            m_matchedCellInfo = m_matchedCellInfo.Distinct().ToList();
             m_matchedCellInfo.Sort((info1, info2) =>
             (info1.R * m_height + info1.C).CompareTo(info2.R * m_height + info2.C));
             foreach (var index in m_matchedCellInfo)
@@ -390,7 +381,6 @@ namespace Assets.Scripts.Match3
             {
                 var row = cellinfo.R;
                 var col = cellinfo.C;
-                Cell cellToRefill = null;
                 for (int i = row + 1, j = row; i < m_height; i++, j++)
                 {
                     if (m_cellsUnUsed[j, col] == null) break;
@@ -409,16 +399,11 @@ namespace Assets.Scripts.Match3
                         {
                             m_recheckList.Add(m_cells[j, col]);
                         }
-                        cellToRefill = m_cellsUnUsed[i, col] = m_cells[i, col];
+                        m_cellsUnUsed[i, col] = m_cells[i, col];
                         m_cells[i, col] = null;
                     }
 
                     yield return null;
-                }
-
-                if (cellToRefill != null)
-                {
-                    m_refillList.Add(cellToRefill);
                 }
             }
             m_matchedCellInfo.Clear();
@@ -428,6 +413,7 @@ namespace Assets.Scripts.Match3
             }
             else
             {
+                StartCoroutine(Refill());
                 _gameState = GameState.Move;
             }
         }
@@ -449,30 +435,33 @@ namespace Assets.Scripts.Match3
             }
             else
             {
-                if (m_refillList.Count > 0)
-                {
-                    StartCoroutine(Refill());
-                }
-                else
-                {
-                    _gameState = GameState.Move;
-                }
+                StartCoroutine(Refill());
             }
         }
 
         private IEnumerator Refill()
         {
-            m_refillList.Sort((c1, c2) =>
-                (c1.ThisCellInfo.R * m_height + c1.ThisCellInfo.C).CompareTo(c2.ThisCellInfo.R * m_height + c2.ThisCellInfo.C));
-            /*foreach (var cell in m_refillList)
+            for (var row = 0; row < m_height; ++row)
             {
-                m_recheckList.Add(cell);
-                cell.SetCell(Random.Range(0, m_tileTypePrefabs.Length));
-                m_cells[cell.ThisCellInfo.R, cell.ThisCellInfo.C] = cell;
-                m_cellsUnUsed[cell.ThisCellInfo.R, cell.ThisCellInfo.C] = null;
-                yield return null;
+                for (var column = 0; column < m_width; ++column)
+                {
+                    if (m_cells[row, column] != null && m_cells[row, column].IsMatched)
+                    {
+                        m_recheckList.Add(m_cells[row, column]);
+                        m_cells[row, column].SetCell(Random.Range(0, m_tileTypePrefabs.Length));
+                    }
+
+                    if (m_cellsUnUsed[row, column] != null && m_cellsUnUsed[row, column].IsMatched)
+                    {
+                        m_recheckList.Add(m_cellsUnUsed[row, column]);
+                        m_cellsUnUsed[row, column].SetCell(Random.Range(0, m_tileTypePrefabs.Length));
+                        m_cells[row, column] = m_cellsUnUsed[row, column];
+                        m_cellsUnUsed[row, column] = null;
+                    }
+
+                    yield return null;
+                }
             }
-            m_refillList.Clear();
             if (m_recheckList.Count > 0)
             {
                 StartCoroutine(ReCheck());
@@ -480,8 +469,7 @@ namespace Assets.Scripts.Match3
             else
             {
                 _gameState = GameState.Move;
-            }*/
-            yield return null;
+            }
         }
 
         private bool CheckForMatchesDuringGame(Cell cellUnderCheck, Direction ignoreDirection)

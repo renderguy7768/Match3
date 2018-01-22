@@ -3,16 +3,17 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-/**
- *************************** DO NOT FORGET TO CLEAN UP BEFORE SUBMITTING*************************
- **/
-
 namespace Assets.Scripts.Match3
 {
     public class Cell : Graphic, IPointerDownHandler, IPointerUpHandler
     {
-        private const float MinMoveSpeed = 350.0f;
-        private const float MaxMoveSpeed = MinMoveSpeed + 100.0f;
+        private const float InitMinMoveSpeed = 350.0f;
+        private const float InitMaxMoveSpeed = InitMinMoveSpeed + 100.0f;
+
+        private const float GameMinMoveSpeed = InitMinMoveSpeed * 2.0f;
+        private const float GameMaxMoveSpeed = GameMinMoveSpeed + 100.0f;
+
+        public static bool IsBoardPopulated;
 
         [Serializable]
         public struct CellInfo
@@ -113,7 +114,9 @@ namespace Assets.Scripts.Match3
         {
             if (IsMatched) return;
             var t = Mathf.Abs((rectTransform.localPosition.y - ms_boardMinY) / ms_boardMinY);
-            var currentSpeed = Mathf.Lerp(MinMoveSpeed, MaxMoveSpeed, t);
+            var currentSpeed = IsBoardPopulated
+                ? Mathf.Lerp(GameMinMoveSpeed, GameMaxMoveSpeed, t)
+                : Mathf.Lerp(InitMinMoveSpeed, InitMaxMoveSpeed, t);
             rectTransform.localPosition =
                 Vector3.MoveTowards(
                     rectTransform.localPosition,
