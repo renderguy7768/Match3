@@ -27,7 +27,7 @@ namespace Assets.Scripts.Match3
 
         public Image ChildImage { get; private set; }
         public Color MatchColor { get; private set; }
-        public bool IsMatched;
+        public bool IsMatched { get; set; }
 
         // Treating CellType as Bit Flag
         private uint _cellType;
