@@ -27,6 +27,31 @@ public static class ProgrammingTest
     A very limited start has been provided in the Match3 scene, TODO comments have been left in
     Grid.cs to help you get started.
     */
+
+/**
+The estimated amount of time:
+Part1: 15 min
+Part2: 45min + (30 min to test all code and remove any bugs)
+Part3: Week (2 days to look at resources and plan my approach + 5 days for implementation, bug fixes and testing)
+Tutorial that I used as a reference: https://www.youtube.com/watch?v=QcXoKw-RRgk&list=PL4vbr3u7UKWrxEz75MqmTDd899cYAvQ_B
+
+Controls:
+1. Swipe to change swap titles.
+2. Press top right �X� to exit.
+
+I have made optimizations where I can in the Match 3 implementation. Followed DRY as mush as possible. 
+
+Extra things I did:
+Implemented swapping instead of just click and place.
+Wrote native code for windows so that app is launched in portrait mode without borders and title bar when built for windows. 
+
+The things I would do better if I had more time:
+Improve re-filling of the board.
+Remove the extra array used, if possible, to cache unused refs of tiles.
+Improve tile falling as it is a bit stupid as of now. Re-ordering is needed.
+
+*/
+
     #region AnswerMe
 
     /*
