@@ -113,6 +113,7 @@ namespace Assets.Scripts.Match3
 
                     var newCell = new GameObject("cell " + row + ", " + column);
 
+                    newCell.AddComponent<CanvasRenderer>();
                     var rectTransform = newCell.AddComponent<RectTransform>();
                     rectTransform.SetParent(m_rectTransform);
                     rectTransform.localScale = Vector3.one;
