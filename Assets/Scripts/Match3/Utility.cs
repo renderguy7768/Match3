@@ -4,9 +4,7 @@ namespace Assets.Scripts.Match3
     {
         public static void Swap<T>(ref T left, ref T right)
         {
-            var temp = left;
-            left = right;
-            right = temp;
+            (right, left) = (left, right);
         }
     }
 }

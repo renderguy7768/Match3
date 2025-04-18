@@ -548,10 +548,7 @@ namespace Assets.Scripts.Match3
 
         private bool CheckMatch3DuringGame(int row, int column, uint cellType, Direction direction)
         {
-            var r1 = -1;
-            var c1 = -1;
-            var r2 = -1;
-            var c2 = -1;
+            int r1, c1, r2, c2;
             switch (direction)
             {
                 case Direction.Left:
@@ -606,7 +603,6 @@ namespace Assets.Scripts.Match3
             Score.OnScoreChanged.Invoke(_score);
 
             return true;
-
         }
 
         private void ActualSwap(Cell c1, Cell c2)
