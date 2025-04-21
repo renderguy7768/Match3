@@ -132,19 +132,5 @@ namespace Assets.Scripts.Match3
             otherCell.gameObject.name = "cell " + otherCell.ThisCellInfo.R + ", " + otherCell.ThisCellInfo.C;
 #endif
         }
-
-        ////////////////////////////////////////////////////////
-        // Overrides for Graphic in order to have an invisible
-        // UI Collider
-        ////////////////////////////////////////////////////////
-        protected override void OnPopulateMesh(VertexHelper vh)
-        {
-            vh.Clear();
-        }
-
-        public override bool Raycast(Vector2 sp, Camera eventCamera)
-        {
-            return true;
-        }
     }
 }

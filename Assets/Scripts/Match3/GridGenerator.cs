@@ -136,6 +136,7 @@ namespace Assets.Scripts.Match3
                     m_cells[row, column].Setup(row, column, xPos, yPos);
                     m_cells[row, column].Clicked += OnCellClicked;
                     m_cells[row, column].Released += OnCellReleased;
+                    m_cells[row, column].color = Color.clear;
                 }
             }
 
